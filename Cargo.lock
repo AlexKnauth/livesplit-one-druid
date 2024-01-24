@@ -1777,7 +1777,7 @@ checksum = "01cda141df6706de531b6c46c3a33ecca755538219bd484262fa09410c13539c"
 [[package]]
 name = "livesplit-auto-splitting"
 version = "0.1.0"
-source = "git+https://github.com/LiveSplit/livesplit-core#f803c68f87783ecbe733f89e8745f4778f4e0ab9"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy-xml-hack#d83403b864697700c901b8251a9da683d4032f49"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -1799,7 +1799,7 @@ dependencies = [
 [[package]]
 name = "livesplit-core"
 version = "0.13.0"
-source = "git+https://github.com/LiveSplit/livesplit-core#f803c68f87783ecbe733f89e8745f4778f4e0ab9"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy-xml-hack#d83403b864697700c901b8251a9da683d4032f49"
 dependencies = [
  "base64-simd",
  "bytemuck",
@@ -1833,7 +1833,7 @@ dependencies = [
 [[package]]
 name = "livesplit-hotkey"
 version = "0.7.0"
-source = "git+https://github.com/LiveSplit/livesplit-core#f803c68f87783ecbe733f89e8745f4778f4e0ab9"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy-xml-hack#d83403b864697700c901b8251a9da683d4032f49"
 dependencies = [
  "bitflags 2.4.0",
  "cfg-if",
@@ -1871,7 +1871,7 @@ dependencies = [
 [[package]]
 name = "livesplit-title-abbreviations"
 version = "0.3.0"
-source = "git+https://github.com/LiveSplit/livesplit-core#f803c68f87783ecbe733f89e8745f4778f4e0ab9"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy-xml-hack#d83403b864697700c901b8251a9da683d4032f49"
 dependencies = [
  "unicase",
 ]
