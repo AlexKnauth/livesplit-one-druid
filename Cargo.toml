@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 druid = { git = "https://github.com/CryZe/druid", branch = "changes-for-livesplit-one" }
-livesplit-core = { git = "https://github.com/LiveSplit/livesplit-core", features = ["font-loading", "software-rendering"] }
+livesplit-core = { git = "https://github.com/AlexKnauth/livesplit-core", branch = "legacy-xml-hack", features = ["font-loading", "software-rendering"] }
 image = "0.24.2"
 log = { version = "0.4.6", features = ["serde"] }
 serde = { version = "1.0.85", features = ["derive", "rc"] }
