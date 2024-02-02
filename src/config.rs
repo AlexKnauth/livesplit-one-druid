@@ -140,7 +140,11 @@ impl Config {
     }
 
     fn parse() -> Option<Self> {
-        let buf = fs::read(CONFIG_PATH.as_path()).ok()?;
+        let config_path = CONFIG_PATH.as_path();
+        if !config_path.exists() {
+            println!("warning: config file does not exist: {:?}", config_path);
+        }
+        let buf = fs::read(config_path).ok()?;
         serde_yaml::from_slice(&buf).ok()
     }
 
