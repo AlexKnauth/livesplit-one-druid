@@ -125,7 +125,7 @@ impl Default for Window {
 
 static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| {
     ProjectDirs::from("org", "LiveSplit", "LiveSplit One")
-        .map(|dirs| dirs.data_local_dir().join("config.yml"))
+        .map(|dirs| dirs.config_local_dir().join("config.yml"))
         .unwrap_or_default()
 });
 
