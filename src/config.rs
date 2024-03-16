@@ -249,34 +249,37 @@ impl Config {
 
     pub fn open_splits(
         &mut self,
-        timer: &mut Timer,
+        shared_timer: &SharedTimer,
         layout_data: &mut LayoutData,
         auto_splitter: &livesplit_core::auto_splitting::Runtime,
         path: PathBuf,
     ) -> Result<()> {
-        let file = fs::read(&path).context("Failed reading the file.")?;
-        let run = composite::parse(&file, Some(&path)).context("Failed parsing the file.")?;
-        timer.set_run(run.run).ok().context(
-            "The splits can't be used with the timer because they don't contain a single segment.",
-        )?;
+        {
+            let timer = &mut shared_timer.write().unwrap();
+            let file = fs::read(&path).context("Failed reading the file.")?;
+            let run = composite::parse(&file, Some(&path)).context("Failed parsing the file.")?;
+            timer.set_run(run.run).ok().context(
+                "The splits can't be used with the timer because they don't contain a single segment.",
+            )?;
 
-        self.splits.can_save = run.kind == TimerKind::LiveSplit;
-        self.splits.current = Some(path);
-        self.splits.add_to_history(timer.run());
+            self.splits.can_save = run.kind == TimerKind::LiveSplit;
+            self.splits.current = Some(path);
+            self.splits.add_to_history(timer.run());
 
-        self.save_config();
+            self.save_config();
 
-        #[cfg(feature = "auto-splitting")]
-        self.maybe_replace_auto_splitter(auto_splitter, timer.clone().into_shared());
-
-        if let Some(linked_layout) = timer.run().linked_layout() {
-            match linked_layout {
-                LinkedLayout::Default => self.new_layout(None, layout_data),
-                LinkedLayout::Path(path) => {
-                    let _ = self.open_layout(None, layout_data, Path::new(path));
+            if let Some(linked_layout) = timer.run().linked_layout() {
+                match linked_layout {
+                    LinkedLayout::Default => self.new_layout(None, layout_data),
+                    LinkedLayout::Path(path) => {
+                        let _ = self.open_layout(None, layout_data, Path::new(path));
+                    }
                 }
             }
         }
+
+        #[cfg(feature = "auto-splitting")]
+        self.maybe_replace_auto_splitter(auto_splitter, shared_timer.clone());
 
         Ok(())
     }
