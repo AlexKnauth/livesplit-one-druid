@@ -348,7 +348,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     });
                 } else if let Some(file_info) = command.get(CONTEXT_MENU_OPEN_SPLITS) {
                     let result = data.config.borrow_mut().open_splits(
-                        &mut data.timer.write().unwrap(),
+                        &data.timer,
                         &mut data.layout_data.borrow_mut(),
                         &data.auto_splitter,
                         file_info.path().to_path_buf(),
