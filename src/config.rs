@@ -268,7 +268,7 @@ impl Config {
         self.save_config();
 
         #[cfg(feature = "auto-splitting")]
-        self.maybe_load_auto_splitter(auto_splitter, timer.clone().into_shared());
+        self.maybe_replace_auto_splitter(auto_splitter, timer.clone().into_shared());
 
         if let Some(linked_layout) = timer.run().linked_layout() {
             match linked_layout {
@@ -458,6 +458,19 @@ impl Config {
     pub fn maybe_load_auto_splitter(&self, runtime: &livesplit_core::auto_splitting::Runtime, timer: SharedTimer) {
         if let Some(auto_splitter) = &self.general.auto_splitter {
             if let Err(e) = runtime.load(auto_splitter.clone(), timer) {
+                // TODO: Error chain
+                log::error!("Auto Splitter failed to load: {}", e);
+            }
+        }
+    }
+
+    #[cfg(feature = "auto-splitting")]
+    pub fn maybe_replace_auto_splitter(&self, runtime: &livesplit_core::auto_splitting::Runtime, timer: SharedTimer) {
+        if let Some(auto_splitter) = &self.general.auto_splitter {
+            if let Err(e) = runtime.unload() {
+                // TODO: Error chain
+                log::error!("Auto Splitter failed to unload: {}", e);
+            } else if let Err(e) = runtime.load(auto_splitter.clone(), timer) {
                 // TODO: Error chain
                 log::error!("Auto Splitter failed to load: {}", e);
             }
