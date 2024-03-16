@@ -350,6 +350,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     let result = data.config.borrow_mut().open_splits(
                         &mut data.timer.write().unwrap(),
                         &mut data.layout_data.borrow_mut(),
+                        #[cfg(feature = "auto-splitting")]
+                        &data.auto_splitter,
                         file_info.path().to_path_buf(),
                     );
                     or_show_error(result);
