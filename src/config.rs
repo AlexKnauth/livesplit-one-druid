@@ -251,6 +251,7 @@ impl Config {
         &mut self,
         timer: &mut Timer,
         layout_data: &mut LayoutData,
+        auto_splitter: &livesplit_core::auto_splitting::Runtime,
         path: PathBuf,
     ) -> Result<()> {
         let file = fs::read(&path).context("Failed reading the file.")?;
@@ -264,6 +265,9 @@ impl Config {
         self.splits.add_to_history(timer.run());
 
         self.save_config();
+
+        #[cfg(feature = "auto-splitting")]
+        self.maybe_load_auto_splitter(auto_splitter, timer.clone().into_shared());
 
         if let Some(linked_layout) = timer.run().linked_layout() {
             match linked_layout {
