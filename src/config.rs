@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use druid::WindowDesc;
 use livesplit_core::{

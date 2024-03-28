@@ -67,7 +67,7 @@ impl ListIter<SettingsRow> for State {
             row.value.clone_from(&field.value);
             cb(&mut row, index);
             if row.value != field.value {
-                editor.set_value(index, row.value.clone());
+                let _ = editor.set_value(index, row.value.clone());
                 changed = true;
             }
         }

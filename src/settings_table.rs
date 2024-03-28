@@ -9,7 +9,6 @@ use crate::{
 };
 use druid::{
     lens::Identity,
-    theme,
     widget::{Flex, Label, LineBreaking, List, ListIter, Stepper, Switch, TextBox, ViewSwitcher},
     BoxConstraints, Color, Data, Env, Event, EventCtx, Insets, LayoutCtx, Lens, LensExt, LifeCycle,
     LifeCycleCtx, PaintCtx, RenderContext, Size, TextAlignment, UpdateCtx, Widget, WidgetExt,
@@ -110,7 +109,7 @@ pub fn widget<T: ListIter<SettingsRow>>() -> impl Widget<T> {
             Flex::row()
                 .with_spacer(6.0)
                 .with_child(
-                    Label::new(|data: &String, env: &_| data.to_owned())
+                    Label::new(|data: &String, _env: &_| data.to_owned())
                         .with_line_break_mode(LineBreaking::WordWrap)
                         .lens(SettingsRow::text)
                         .fix_width(225.0),
@@ -246,6 +245,7 @@ pub fn widget<T: ListIter<SettingsRow>>() -> impl Widget<T> {
                                     .expand_width()
                                     .center(),
                             ),
+                            Value::LayoutBackground(_) => todo!("LayoutBackground"),
                             Value::Color(_) => Box::new(color()),
                             Value::OptionalColor(_) => Box::new(optional_color()),
                             Value::Font(_) => Box::new(font()),

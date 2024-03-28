@@ -7,7 +7,7 @@ use std::{
 };
 
 use druid::{Data, Lens, WindowId};
-use livesplit_core::{layout::LayoutState, HotkeySystem, Layout, SharedTimer, Timer};
+use livesplit_core::{layout::LayoutState, settings::ImageCache, HotkeySystem, Layout, SharedTimer, Timer};
 use mimalloc::MiMalloc;
 use once_cell::sync::Lazy;
 
@@ -62,6 +62,7 @@ pub struct MainState {
     run_editor: Option<OpenWindow<run_editor::State>>,
     layout_editor: Option<OpenWindow<layout_editor::State>>,
     settings_editor: Option<OpenWindow<settings_editor::State>>,
+    image_cache: Rc<RefCell<ImageCache>>,
 }
 
 pub struct LayoutData {
@@ -115,6 +116,7 @@ impl MainState {
             run_editor: None,
             layout_editor: None,
             settings_editor: None,
+            image_cache: Rc::new(RefCell::new(ImageCache::new())),
         }
     }
 }

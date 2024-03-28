@@ -3,21 +3,18 @@ use std::{cell::RefCell, rc::Rc};
 use druid::{
     commands,
     lens::Identity,
-    piet::{ImageFormat, InterpolationMode},
-    text::{Formatter, ParseFormatter, Selection, Validation, ValidationError},
+    text::{Formatter, Selection, Validation, ValidationError},
     theme,
     widget::{
-        Button, ClipBox, Container, CrossAxisAlignment, FillStrat, Flex, Label, List, ListIter,
-        MainAxisAlignment, Painter, Scroll, Switch, TextBox,
+        Button, ClipBox, Container, CrossAxisAlignment, Flex, Label, List, ListIter,
+        Painter, Scroll, Switch, TextBox,
     },
-    BoxConstraints, Color, Data, Env, Event, EventCtx, ImageBuf, LayoutCtx, Lens, LensExt,
+    BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LensExt,
     LifeCycle, LifeCycleCtx, LinearGradient, Menu, MenuItem, PaintCtx, RenderContext, Selector,
     Size, TextAlignment, UnitPoint, UpdateCtx, Widget, WidgetExt,
 };
 use livesplit_core::{
-    run::editor,
-    timing::formatter::{none_wrapper::EmptyWrapper, Accuracy, SegmentTime, TimeFormatter},
-    RunEditor, TimeSpan, TimingMethod,
+    run::editor, settings::ImageCache, RunEditor, TimeSpan, TimingMethod
 };
 
 use crate::{
@@ -28,8 +25,8 @@ use crate::{
         DIALOG_BUTTON_WIDTH, GRID_BORDER, ICON_SIZE, MARGIN, SPACING, TABLE_HORIZONTAL_MARGIN,
         TIME_COLUMN_WIDTH,
     },
-    formatter_scope::{self, formatted, optional_time_span, validated, OnFocusLoss},
-    LayoutData, MainState,
+    formatter_scope::{formatted, optional_time_span, validated, OnFocusLoss},
+    MainState,
 };
 
 struct SegmentWidget<T> {
@@ -129,11 +126,13 @@ pub struct State {
     pub editor: Rc<RefCell<Option<RunEditor>>>,
     #[data(ignore)]
     pub closed_with_ok: bool,
+    image_cache: Rc<RefCell<ImageCache>>,
 }
 
 impl State {
-    pub fn new(mut editor: RunEditor, config: Rc<RefCell<Config>>) -> Self {
-        let state = Rc::new(editor.state());
+    pub fn new(editor: RunEditor, config: Rc<RefCell<Config>>) -> Self {
+        let mut image_cache = ImageCache::new();
+        let state = Rc::new(editor.state(&mut image_cache));
         // let image = image::load_from_memory(state.icon_change.as_deref().unwrap())
         //     .unwrap()
         //     .into_rgba8();
@@ -150,6 +149,7 @@ impl State {
             // image,
             editor: Rc::new(RefCell::new(Some(editor))),
             closed_with_ok: false,
+            image_cache: Rc::new(RefCell::new(image_cache)),
         }
     }
 }
@@ -157,7 +157,7 @@ impl State {
 fn game_icon() -> impl Widget<State> {
     Container::new(Flex::row())
         // .background(Color::grey8(0x16))
-        .background(Painter::new(|ctx, state: &State, _| {
+        .background(Painter::new(|_ctx, _state: &State, _| {
             // let matrix = FillStrat::Contain.affine_to_fill(ctx.size(), state.image.size());
             // ctx.with_save(|ctx| {
             //     ctx.transform(matrix);
@@ -171,7 +171,7 @@ fn game_icon() -> impl Widget<State> {
         }))
         .padding(BUTTON_SPACING)
         .border(BUTTON_BORDER, 1.0)
-        .on_click(|ctx, _, _| {
+        .on_click(|_ctx, _, _| {
             // TODO:
             // let menu = MenuDesc::new(LocalizedString::new("foo"))
             //     .append(druid::platform_menus::win::file::open())
@@ -195,7 +195,7 @@ fn game_name() -> impl Widget<State> {
                         let mut editor = state.editor.borrow_mut();
                         let editor = editor.as_mut().unwrap();
                         editor.set_game_name(name);
-                        state.state = Rc::new(editor.state());
+                        state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                     },
                 ))
                 .expand_width(),
@@ -215,7 +215,7 @@ fn category_name() -> impl Widget<State> {
                         let mut editor = state.editor.borrow_mut();
                         let editor = editor.as_mut().unwrap();
                         editor.set_category_name(name);
-                        state.state = Rc::new(editor.state());
+                        state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                     },
                 ))
                 .expand_width(),
@@ -229,7 +229,7 @@ impl Formatter<String> for TimeSpanFormatter {
         value.clone()
     }
 
-    fn validate_partial_input(&self, input: &str, sel: &Selection) -> Validation {
+    fn validate_partial_input(&self, input: &str, _sel: &Selection) -> Validation {
         match input.parse::<TimeSpan>() {
             Ok(_) => Validation::success(),
             Err(e) => Validation::failure(e),
@@ -258,7 +258,7 @@ fn offset() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     let _ = editor.parse_and_set_offset(&value);
-                    state.state = Rc::new(editor.state());
+                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                 },
             ))
             .expand_width(),
@@ -285,7 +285,7 @@ fn attempts() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.set_attempt_count(value);
-                    state.state = Rc::new(editor.state());
+                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                 },
             ))
             .expand_width(),
@@ -317,7 +317,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.insert_segment_above();
-                    state.state = Rc::new(editor.state());
+                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
@@ -329,7 +329,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.insert_segment_below();
-                    state.state = Rc::new(editor.state());
+                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
@@ -341,7 +341,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.remove_segments();
-                    state.state = Rc::new(editor.state());
+                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
@@ -353,7 +353,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.move_segments_up();
-                    state.state = Rc::new(editor.state());
+                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
@@ -365,7 +365,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.move_segments_down();
-                    state.state = Rc::new(editor.state());
+                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
@@ -467,7 +467,7 @@ impl ListIter<Segment> for State {
         }
 
         if changed {
-            self.state = Rc::new(editor.state());
+            self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut()));
         }
     }
 
@@ -621,7 +621,7 @@ fn tabs() -> impl Widget<State> {
                             let mut editor = state.editor.borrow_mut();
                             let editor = editor.as_mut().unwrap();
                             editor.select_timing_method(TimingMethod::RealTime);
-                            state.state = Rc::new(editor.state());
+                            state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                         })
                         .env_scope(|env, data: &State| {
                             if data.state.timing_method == TimingMethod::RealTime {
@@ -636,7 +636,7 @@ fn tabs() -> impl Widget<State> {
                             let mut editor = state.editor.borrow_mut();
                             let editor = editor.as_mut().unwrap();
                             editor.select_timing_method(TimingMethod::GameTime);
-                            state.state = Rc::new(editor.state());
+                            state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                         })
                         .env_scope(|env, data: &State| {
                             if data.state.timing_method == TimingMethod::GameTime {
@@ -689,6 +689,7 @@ struct RunEditorWidget<T> {
 }
 
 impl<T> RunEditorWidget<T> {
+    #[allow(dead_code)]
     fn new(inner: T) -> Self {
         Self { inner }
     }
@@ -817,7 +818,7 @@ pub fn root_widget() -> impl Widget<State> {
                 .with_spacer(BUTTON_SPACING)
                 .with_child(
                     Button::new("Cancel")
-                        .on_click(|ctx, state, _| {
+                        .on_click(|ctx, _state, _| {
                             ctx.submit_command(commands::CLOSE_WINDOW);
                         })
                         .fix_size(DIALOG_BUTTON_WIDTH, DIALOG_BUTTON_HEIGHT),
@@ -866,12 +867,12 @@ impl<T: Widget<State>> Widget<State> for OtherButtonWidget<T> {
                 let mut editor = data.editor.borrow_mut();
                 let editor = editor.as_mut().unwrap();
                 editor.clear_history();
-                data.state = Rc::new(editor.state());
+                data.state = Rc::new(editor.state(&mut data.image_cache.borrow_mut()));
             } else if command.is(CLEAR_TIMES) {
                 let mut editor = data.editor.borrow_mut();
                 let editor = editor.as_mut().unwrap();
                 editor.clear_times();
-                data.state = Rc::new(editor.state());
+                data.state = Rc::new(editor.state(&mut data.image_cache.borrow_mut()));
             }
         }
         self.inner.event(ctx, event, data, env)

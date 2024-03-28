@@ -1,37 +1,32 @@
 use std::{
-    fs::{self, File},
-    io::{BufReader, Cursor, Seek, SeekFrom},
-    path::{Path, PathBuf},
+    path::Path,
     sync::Arc,
 };
 
 use druid::{
     commands,
     menu::MenuEntry,
-    piet::{Device, ImageFormat, PietImage},
+    piet::PietImage,
     theme,
     widget::{Controller, Flex},
-    AppDelegate, AppLauncher, BoxConstraints, Command, DelegateCtx, Env, Event, EventCtx,
-    FileDialogOptions, FileInfo, FileSpec, LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString,
-    Menu, MenuItem, MouseButton, Point, RenderContext, Selector, Size, UpdateCtx, Widget,
+    AppDelegate, AppLauncher, BoxConstraints, DelegateCtx, Env, Event, EventCtx,
+    FileDialogOptions, FileInfo, FileSpec, LayoutCtx, LifeCycle, LifeCycleCtx,
+    Menu, MenuItem, MouseButton, Point, Selector, Size, UpdateCtx, Widget,
     WidgetExt, WindowDesc, WindowId, WindowLevel,
 };
 use livesplit_core::{
-    layout::{self, LayoutSettings},
-    run::parser::{composite, TimerKind},
-    Layout, LayoutEditor, RunEditor, TimerPhase, TimingMethod,
+    LayoutEditor, RunEditor, TimerPhase, TimingMethod,
 };
 use native_dialog::MessageType;
-use once_cell::sync::OnceCell;
 
 use crate::{
-    config::{or_show_error, show_error},
+    config::or_show_error,
     consts::{
-        BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP, MARGIN,
+        BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP,
         PRIMARY_LIGHT, SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
     },
     layout_editor, run_editor, settings_editor, software_renderer, LayoutEditorLens, MainState,
-    OpenWindow, RunEditorLens, SettingsEditorLens, FONT_FAMILIES, HOTKEY_SYSTEM,
+    OpenWindow, RunEditorLens, SettingsEditorLens, HOTKEY_SYSTEM,
 };
 
 struct WithMenu<T> {
@@ -331,7 +326,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
             }
             Event::Command(command) => {
                 if command.is(CONTEXT_MENU_EDIT_SPLITS) {
-                    HOTKEY_SYSTEM
+                    let _ = HOTKEY_SYSTEM
                         .write()
                         .unwrap()
                         .as_mut()
@@ -365,7 +360,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     );
                     or_show_error(result);
                 } else if command.is(CONTEXT_MENU_EDIT_LAYOUT) {
-                    HOTKEY_SYSTEM
+                    let _ = HOTKEY_SYSTEM
                         .write()
                         .unwrap()
                         .as_mut()
@@ -429,7 +424,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         .set_current_timing_method(*timing_method);
                     data.config.borrow_mut().set_timing_method(*timing_method);
                 } else if command.is(CONTEXT_MENU_EDIT_SETTINGS) {
-                    HOTKEY_SYSTEM
+                    let _ = HOTKEY_SYSTEM
                         .write()
                         .unwrap()
                         .as_mut()
@@ -664,7 +659,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
         self.inner.layout(ctx, bc, data, env)
     }
 
-    fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &MainState, env: &Env) {
+    fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &MainState, _env: &Env) {
         let mut layout_data = data.layout_data.borrow_mut();
         let layout_data = &mut *layout_data;
 
@@ -677,11 +672,13 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                 .unwrap()
                 .update_layout_state(
                     &mut layout_data.layout_state,
+                    &mut data.image_cache.borrow_mut(),
                     &data.timer.read().unwrap().snapshot(),
                 );
         } else {
             layout_data.layout.update_state(
                 &mut layout_data.layout_state,
+                &mut data.image_cache.borrow_mut(),
                 &data.timer.read().unwrap().snapshot(),
             );
         }
@@ -702,13 +699,15 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
         //     &mut self.bottom_image,
         //     &mut self.device,
         //     layout_data.scene_manager.scene(),
+        //     &data.image_cache.borrow(),
         // );
 
-        if let Some((new_width, new_height)) = software_renderer::render_scene(
+        if let Some([new_width, new_height]) = software_renderer::render_scene(
             ctx,
             &mut self.bottom_image,
             &mut self.renderer,
             &layout_data.layout_state,
+            &data.image_cache.borrow(),
         ) {
             ctx.window()
                 .set_size(Size::new(new_width as _, new_height as _));
@@ -798,8 +797,8 @@ impl AppDelegate<MainState> for WindowManagement {
         &mut self,
         id: WindowId,
         data: &mut MainState,
-        env: &Env,
-        ctx: &mut DelegateCtx,
+        _env: &Env,
+        _ctx: &mut DelegateCtx,
     ) {
         if let Some(window) = &data.run_editor {
             if id == window.id {
@@ -813,7 +812,7 @@ impl AppDelegate<MainState> for WindowManagement {
                         .unwrap();
                 }
                 data.run_editor = None;
-                HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
+                let _ = HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
                 return;
             }
         }
@@ -827,7 +826,7 @@ impl AppDelegate<MainState> for WindowManagement {
                     layout_data.is_modified = true;
                 }
                 data.layout_editor = None;
-                HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
+                let _ = HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
                 return;
             }
         }
@@ -836,7 +835,7 @@ impl AppDelegate<MainState> for WindowManagement {
             if id == window.id {
                 if window.state.closed_with_ok {
                     let hotkey_config = window.state.editor.borrow_mut().take().unwrap();
-                    HOTKEY_SYSTEM
+                    let _ = HOTKEY_SYSTEM
                         .write()
                         .unwrap()
                         .as_mut()
@@ -845,7 +844,7 @@ impl AppDelegate<MainState> for WindowManagement {
                     data.config.borrow_mut().set_hotkeys(hotkey_config);
                 }
                 data.settings_editor = None;
-                HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
+                let _ = HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
                 return;
             }
         }

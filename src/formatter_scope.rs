@@ -1,6 +1,5 @@
 use std::{
     borrow::Cow,
-    cell::{Cell, RefCell},
     mem,
     ops::Range,
 };
@@ -8,13 +7,9 @@ use std::{
 use druid::{
     piet::{self, PietTextLayoutBuilder, TextAttribute, TextLayoutBuilder},
     text::{self, EditableText, StringCursor},
-    widget::{Scope, ScopeTransfer},
-    Color, Command, Data, Env, Selector, Target, Widget, WidgetId, WidgetPod,
+    Color, Command, Data, Env, Selector, Target, Widget, WidgetPod,
 };
-use livesplit_core::{
-    timing::formatter::{none_wrapper::EmptyWrapper, Accuracy, SegmentTime, TimeFormatter},
-    TimeSpan,
-};
+use livesplit_core::TimeSpan;
 
 #[derive(Clone)]
 pub struct ValidatedString {
