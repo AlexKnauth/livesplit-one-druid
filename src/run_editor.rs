@@ -195,6 +195,7 @@ fn game_name() -> impl Widget<State> {
                         let editor = editor.as_mut().unwrap();
                         editor.set_game_name(name);
                         state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                        state.image_cache.borrow_mut().collect();
                     },
                 ))
                 .expand_width(),
@@ -215,6 +216,7 @@ fn category_name() -> impl Widget<State> {
                         let editor = editor.as_mut().unwrap();
                         editor.set_category_name(name);
                         state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                        state.image_cache.borrow_mut().collect();
                     },
                 ))
                 .expand_width(),
@@ -258,6 +260,7 @@ fn offset() -> impl Widget<State> {
                     let editor = editor.as_mut().unwrap();
                     let _ = editor.parse_and_set_offset(&value);
                     state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                    state.image_cache.borrow_mut().collect();
                 },
             ))
             .expand_width(),
@@ -285,6 +288,7 @@ fn attempts() -> impl Widget<State> {
                     let editor = editor.as_mut().unwrap();
                     editor.set_attempt_count(value);
                     state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                    state.image_cache.borrow_mut().collect();
                 },
             ))
             .expand_width(),
@@ -317,6 +321,7 @@ fn side_buttons() -> impl Widget<State> {
                     let editor = editor.as_mut().unwrap();
                     editor.insert_segment_above();
                     state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                    state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
@@ -329,6 +334,7 @@ fn side_buttons() -> impl Widget<State> {
                     let editor = editor.as_mut().unwrap();
                     editor.insert_segment_below();
                     state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                    state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
@@ -341,6 +347,7 @@ fn side_buttons() -> impl Widget<State> {
                     let editor = editor.as_mut().unwrap();
                     editor.remove_segments();
                     state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                    state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
@@ -353,6 +360,7 @@ fn side_buttons() -> impl Widget<State> {
                     let editor = editor.as_mut().unwrap();
                     editor.move_segments_up();
                     state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                    state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
@@ -365,6 +373,7 @@ fn side_buttons() -> impl Widget<State> {
                     let editor = editor.as_mut().unwrap();
                     editor.move_segments_down();
                     state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                    state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
@@ -468,6 +477,7 @@ impl ListIter<Segment> for State {
         if changed {
             self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut()));
         }
+        self.image_cache.borrow_mut().collect();
     }
 
     fn data_len(&self) -> usize {
@@ -621,6 +631,7 @@ fn tabs() -> impl Widget<State> {
                             let editor = editor.as_mut().unwrap();
                             editor.select_timing_method(TimingMethod::RealTime);
                             state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                            state.image_cache.borrow_mut().collect();
                         })
                         .env_scope(|env, data: &State| {
                             if data.state.timing_method == TimingMethod::RealTime {
@@ -636,6 +647,7 @@ fn tabs() -> impl Widget<State> {
                             let editor = editor.as_mut().unwrap();
                             editor.select_timing_method(TimingMethod::GameTime);
                             state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                            state.image_cache.borrow_mut().collect();
                         })
                         .env_scope(|env, data: &State| {
                             if data.state.timing_method == TimingMethod::GameTime {
@@ -874,6 +886,7 @@ impl<T: Widget<State>> Widget<State> for OtherButtonWidget<T> {
                 data.state = Rc::new(editor.state(&mut data.image_cache.borrow_mut()));
             }
         }
+        data.image_cache.borrow_mut().collect();
         self.inner.event(ctx, event, data, env)
     }
 
