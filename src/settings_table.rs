@@ -245,7 +245,13 @@ pub fn widget<T: ListIter<SettingsRow>>() -> impl Widget<T> {
                                     .expand_width()
                                     .center(),
                             ),
-                            Value::LayoutBackground(_) => todo!("LayoutBackground"),
+                            Value::LayoutBackground(_) => Box::new(
+                                TextBox::new()
+                                    .lens(Identity.map(
+                                        |_| "LayoutBackground".to_string(),
+                                        |_, _| {},
+                                    )),
+                            ),
                             Value::Color(_) => Box::new(color()),
                             Value::OptionalColor(_) => Box::new(optional_color()),
                             Value::Font(_) => Box::new(font()),
