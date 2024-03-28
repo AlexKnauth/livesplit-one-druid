@@ -715,7 +715,9 @@ impl Widget<ColorState> for ColorButtonPod {
         data: &ColorState,
         env: &Env,
     ) -> Size {
-        self.0.layout(ctx, bc, data, env)
+        let size = self.0.layout(ctx, bc, data, env);
+        self.0.set_origin(ctx, Point::new(0.0, 0.0));
+        size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &ColorState, env: &Env) {
