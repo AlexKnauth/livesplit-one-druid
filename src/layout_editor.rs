@@ -54,6 +54,7 @@ impl State {
         let editor = editor.as_mut().unwrap();
         f(editor);
         self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut()));
+        self.image_cache.borrow_mut().collect();
     }
 }
 
@@ -114,6 +115,7 @@ impl ListIter<SettingsRow> for State {
         if changed {
             self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut()));
         }
+        self.image_cache.borrow_mut().collect();
     }
 
     fn data_len(&self) -> usize {
@@ -167,6 +169,7 @@ impl ListIter<ComponentRow> for State {
         if changed {
             self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut()));
         }
+        self.image_cache.borrow_mut().collect();
     }
 
     fn data_len(&self) -> usize {
