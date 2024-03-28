@@ -130,9 +130,8 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(editor: RunEditor, config: Rc<RefCell<Config>>) -> Self {
-        let mut image_cache = ImageCache::new();
-        let state = Rc::new(editor.state(&mut image_cache));
+    pub fn new(editor: RunEditor, config: Rc<RefCell<Config>>, image_cache: Rc<RefCell<ImageCache>>) -> Self {
+        let state = Rc::new(editor.state(&mut image_cache.borrow_mut()));
         // let image = image::load_from_memory(state.icon_change.as_deref().unwrap())
         //     .unwrap()
         //     .into_rgba8();
@@ -149,7 +148,7 @@ impl State {
             // image,
             editor: Rc::new(RefCell::new(Some(editor))),
             closed_with_ok: false,
-            image_cache: Rc::new(RefCell::new(image_cache)),
+            image_cache,
         }
     }
 }

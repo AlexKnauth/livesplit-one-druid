@@ -38,14 +38,14 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(editor: LayoutEditor) -> Self {
-        let mut image_cache = ImageCache::new();
+    pub fn new(editor: LayoutEditor, image_cache: Rc<RefCell<ImageCache>>) -> Self {
+        let state = Rc::new(editor.state(&mut image_cache.borrow_mut()));
         Self {
-            state: Rc::new(editor.state(&mut image_cache)),
+            state,
             editor: Rc::new(RefCell::new(Some(editor))),
             closed_with_ok: false,
             on_component_settings_tab: false,
-            image_cache: Rc::new(RefCell::new(image_cache)),
+            image_cache,
         }
     }
 
