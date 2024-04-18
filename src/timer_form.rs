@@ -17,7 +17,7 @@ use druid::{
 use livesplit_core::{
     LayoutEditor, RunEditor, TimerPhase, TimingMethod,
 };
-use native_dialog::MessageType;
+// use native_dialog::MessageType;
 
 use crate::{
     config::or_show_error,
