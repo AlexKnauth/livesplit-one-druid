@@ -487,6 +487,8 @@ fn default_run() -> Run {
 }
 
 pub fn show_error(error: anyhow::Error) {
+    // this MessageDialog is for displaying errors, 
+    // so I guess it's fine if it crashes? if it was going to crash anyway?
     let _ = native_dialog::MessageDialog::new()
         .set_type(native_dialog::MessageType::Error)
         .set_title("Error")

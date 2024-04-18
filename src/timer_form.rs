@@ -489,6 +489,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     if self.intent.contains(Intent::MAYBE_SAVE_SPLITS) {
                         self.intent = self.intent.without(Intent::MAYBE_SAVE_SPLITS);
                         if data.timer.read().unwrap().run().has_been_modified() {
+                            // TODO: fix this MessageDialog so that it doesn't cause crashes
+                            /*
                             let result = native_dialog::MessageDialog::new()
                                 .set_title("Save Splits?")
                                 .set_text("Your splits have been updated but not yet saved. Do you want to save your splits now?")
@@ -502,6 +504,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             } else {
                                 self.intent = Intent::NONE;
                             }
+                            */
+                            // since the MessageDialog isn't working, assume Yes for now
+                            self.intent = self.intent.with(Intent::SAVE_SPLITS);
                         }
                     }
 
@@ -562,6 +567,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     if self.intent.contains(Intent::MAYBE_SAVE_LAYOUT) {
                         self.intent = self.intent.without(Intent::MAYBE_SAVE_LAYOUT);
                         if data.layout_data.borrow().is_modified {
+                            // TODO: fix this MessageDialog so that it doesn't cause crashes
+                            /*
                             let result = native_dialog::MessageDialog::new()
                                 .set_title("Save Layout?")
                                 .set_text("Your layout has been updated but not yet saved. Do you want to save your layout now?")
@@ -575,6 +582,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             } else {
                                 self.intent = Intent::NONE;
                             }
+                            */
+                            // since the MessageDialog isn't working, assume Yes for now
+                            self.intent = self.intent.with(Intent::SAVE_LAYOUT);
                         }
                     }
 
