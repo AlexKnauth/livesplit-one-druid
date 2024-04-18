@@ -17,7 +17,7 @@ use druid::{
 use livesplit_core::{
     LayoutEditor, RunEditor, TimerPhase, TimingMethod,
 };
-use native_dialog::MessageType;
+// use native_dialog::MessageType;
 
 use crate::{
     config::or_show_error,
@@ -462,6 +462,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             .unwrap()
                             .current_attempt_has_new_best_times()
                         {
+                            // TODO: fix this MessageDialog so that it doesn't cause
+                            // crashes on save while timer is running or ended
+                            /*
                             let result = native_dialog::MessageDialog::new()
                                 .set_title("Update Times?")
                                 .set_text("You have beaten some of your best times. Do you want to update them?")
@@ -474,6 +477,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                 self.intent = Intent::NONE;
                                 break;
                             }
+                            */
+                            // since the MessageDialog isn't working, assume Yes for now
+                            true
                         } else {
                             true
                         };
@@ -483,6 +489,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     if self.intent.contains(Intent::MAYBE_SAVE_SPLITS) {
                         self.intent = self.intent.without(Intent::MAYBE_SAVE_SPLITS);
                         if data.timer.read().unwrap().run().has_been_modified() {
+                            // TODO: fix this MessageDialog so that it doesn't cause crashes
+                            /*
                             let result = native_dialog::MessageDialog::new()
                                 .set_title("Save Splits?")
                                 .set_text("Your splits have been updated but not yet saved. Do you want to save your splits now?")
@@ -496,6 +504,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             } else {
                                 self.intent = Intent::NONE;
                             }
+                            */
+                            // since the MessageDialog isn't working, assume Yes for now
+                            self.intent = self.intent.with(Intent::SAVE_SPLITS);
                         }
                     }
 
@@ -556,6 +567,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     if self.intent.contains(Intent::MAYBE_SAVE_LAYOUT) {
                         self.intent = self.intent.without(Intent::MAYBE_SAVE_LAYOUT);
                         if data.layout_data.borrow().is_modified {
+                            // TODO: fix this MessageDialog so that it doesn't cause crashes
+                            /*
                             let result = native_dialog::MessageDialog::new()
                                 .set_title("Save Layout?")
                                 .set_text("Your layout has been updated but not yet saved. Do you want to save your layout now?")
@@ -569,6 +582,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             } else {
                                 self.intent = Intent::NONE;
                             }
+                            */
+                            // since the MessageDialog isn't working, assume Yes for now
+                            self.intent = self.intent.with(Intent::SAVE_LAYOUT);
                         }
                     }
 
