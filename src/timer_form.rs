@@ -462,6 +462,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             .unwrap()
                             .current_attempt_has_new_best_times()
                         {
+                            // TODO: fix this MessageDialog so that it doesn't cause
+                            // crashes on save while timer is running or ended
+                            /*
                             let result = native_dialog::MessageDialog::new()
                                 .set_title("Update Times?")
                                 .set_text("You have beaten some of your best times. Do you want to update them?")
@@ -474,6 +477,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                 self.intent = Intent::NONE;
                                 break;
                             }
+                            */
+                            // since the MessageDialog isn't working, assume Yes for now
+                            true
                         } else {
                             true
                         };
