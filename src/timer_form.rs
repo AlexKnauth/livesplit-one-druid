@@ -339,7 +339,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         .with_min_size((690.0, 495.0))
                         .window_size((690.0, 495.0))
                         // TODO: WindowLevel::Modal(ctx.window().clone())
-                        .set_level(WindowLevel::AppWindow);
+                        .set_level(WindowLevel::AppWindow)
+                        .set_always_on_top(true);
                     let window_id = window.id;
                     ctx.new_window(window);
                     data.run_editor = Some(OpenWindow {
@@ -375,7 +376,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             .with_min_size((500.0, 600.0))
                             .window_size((550.0, 650.0))
                             // TODO: WindowLevel::Modal(ctx.window().clone())
-                            .set_level(WindowLevel::AppWindow);
+                            .set_level(WindowLevel::AppWindow)
+                            .set_always_on_top(true);
                     let window_id = window.id;
                     ctx.new_window(window);
                     data.layout_editor = Some(OpenWindow {
@@ -437,7 +439,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             .with_min_size((550.0, 400.0))
                             .window_size((550.0, 450.0))
                             // TODO: WindowLevel::Modal(ctx.window().clone())
-                            .set_level(WindowLevel::AppWindow);
+                            .set_level(WindowLevel::AppWindow)
+                            .set_always_on_top(true);
                     let window_id = window.id;
                     ctx.new_window(window);
                     let config = HOTKEY_SYSTEM.read().unwrap().as_ref().unwrap().config();
