@@ -108,6 +108,7 @@ jobs:
             os: macOS-latest
             features: auto-splitting
             cross: skip
+            install_target: true
 
           - label: macOS x86_64-v3
             target: x86_64-apple-darwin
@@ -116,6 +117,7 @@ jobs:
             os: macOS-latest
             features: auto-splitting
             cross: skip
+            install_target: true
 
     steps:
       - name: Checkout Commit
