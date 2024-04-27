@@ -251,6 +251,7 @@ impl Config {
         &mut self,
         shared_timer: &SharedTimer,
         layout_data: &mut LayoutData,
+        #[cfg(feature = "auto-splitting")]
         auto_splitter: &livesplit_core::auto_splitting::Runtime,
         path: PathBuf,
     ) -> Result<()> {
