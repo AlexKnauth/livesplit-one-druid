@@ -454,7 +454,7 @@ impl Config {
             .window_size((self.window.width, self.window.height))
             .show_titlebar(false)
             .transparent(true)
-        // .topmost(true)
+            .set_always_on_top(true)
     }
 
     #[cfg(feature = "auto-splitting")]
