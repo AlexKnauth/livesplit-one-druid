@@ -80,6 +80,7 @@ impl Intent {
     const NEW_LAYOUT: Self = Self(1 << 9);
     const OPEN_LAYOUT: Self = Self(1 << 10);
     const EXIT: Self = Self(1 << 11);
+    const OPEN_AUTO_SPLITTER: Self = Self(1 << 12);
 
     fn contains(self, other: Self) -> bool {
         (self.0 & other.0) == other.0
@@ -105,6 +106,7 @@ const CONTEXT_MENU_EDIT_LAYOUT: Selector = Selector::new("context-menu-edit-layo
 const CONTEXT_MENU_OPEN_LAYOUT: Selector<FileInfo> = Selector::new("context-menu-open-layout");
 const CONTEXT_MENU_SAVE_LAYOUT_AS: Selector<FileInfo> =
     Selector::new("context-menu-save-layout-as");
+const CONTEXT_MENU_OPEN_AUTO_SPLITTER: Selector<FileInfo> = Selector::new("context-menu-open-auto-splitter");
 const CONTEXT_MENU_START_OR_SPLIT: Selector = Selector::new("context-menu-start-or-split");
 const CONTEXT_MENU_UNDO_SPLIT: Selector = Selector::new("context-menu-undo-split");
 const CONTEXT_MENU_SKIP_SPLIT: Selector = Selector::new("context-menu-skip-split");
@@ -304,6 +306,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                         CONTEXT_MENU_SET_INTENT.with(Intent::SAVE_LAYOUT_AS),
                                     )),
                             )
+                            .entry(MenuItem::new("Open Auto-splitter...").command(
+                                CONTEXT_MENU_SET_INTENT.with(Intent::OPEN_AUTO_SPLITTER),
+                            ))
                             .separator()
                             .entry(control_menu)
                             .entry(compare_against)
@@ -402,6 +407,15 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     if result.is_ok() {
                         data.layout_data.borrow_mut().is_modified = false;
                     }
+                    or_show_error(result);
+                } else if let Some(file_info) = command.get(CONTEXT_MENU_OPEN_AUTO_SPLITTER) {
+                    let result = data.config.borrow_mut().open_auto_splitter(
+                        #[cfg(feature = "auto-splitting")]
+                        &data.timer,
+                        #[cfg(feature = "auto-splitting")]
+                        &data.auto_splitter,
+                        file_info.path(),
+                    );
                     or_show_error(result);
                 } else if command.is(CONTEXT_MENU_START_OR_SPLIT) {
                     data.timer.write().unwrap().split_or_start();
@@ -636,6 +650,27 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                     },
                                 ])
                                 .accept_command(CONTEXT_MENU_OPEN_LAYOUT),
+                        );
+                        ctx.submit_command(open_dialog);
+                        break;
+                    }
+
+                    if self.intent.contains(Intent::OPEN_AUTO_SPLITTER) {
+                        self.intent = self.intent.without(Intent::OPEN_AUTO_SPLITTER);
+                        let open_dialog = commands::SHOW_OPEN_PANEL.with(
+                            FileDialogOptions::new()
+                                .title("Open Auto-splitter")
+                                .allowed_types(vec![
+                                    FileSpec {
+                                        name: "WASM Auto-splitters",
+                                        extensions: &["wasm"],
+                                    },
+                                    FileSpec {
+                                        name: "All Files",
+                                        extensions: &["*.*"],
+                                    },
+                                ])
+                                .accept_command(CONTEXT_MENU_OPEN_AUTO_SPLITTER),
                         );
                         ctx.submit_command(open_dialog);
                         break;
