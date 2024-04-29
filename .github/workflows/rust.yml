@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'master'
+      - 'dev'
     tags:
       - '*'
 
@@ -175,6 +176,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          generate_release_notes: true
           files: livesplit-one-*.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
