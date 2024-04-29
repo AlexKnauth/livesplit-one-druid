@@ -399,6 +399,21 @@ impl Config {
         self.general.layout.is_some() && self.general.can_save_layout
     }
 
+    pub fn open_auto_splitter(
+        &mut self,
+        #[cfg(feature = "auto-splitting")]
+        shared_timer: &SharedTimer,
+        #[cfg(feature = "auto-splitting")]
+        runtime: &livesplit_core::auto_splitting::Runtime,
+        path: &Path,
+    ) -> Result<()> {
+        self.general.auto_splitter = Some(path.into());
+        self.save_config();
+        #[cfg(feature = "auto-splitting")]
+        self.maybe_replace_auto_splitter(runtime, shared_timer.clone());
+        Ok(())
+    }
+
     pub fn set_comparison(&mut self, comparison: String) {
         self.general.comparison = Some(comparison);
         self.save_config();
