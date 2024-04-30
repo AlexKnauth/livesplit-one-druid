@@ -364,6 +364,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                 } else if let Some(file_info) = command.get(CONTEXT_MENU_SAVE_SPLITS_AS) {
                     let result = data.config.borrow_mut().save_splits_as(
                         &mut data.timer.write().unwrap(),
+                        #[cfg(feature = "auto-splitting")]
+                        &data.auto_splitter,
                         file_info.path().to_path_buf(),
                     );
                     or_show_error(result);
@@ -534,7 +536,11 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             let result = data
                                 .config
                                 .borrow_mut()
-                                .save_splits(&mut data.timer.write().unwrap());
+                                .save_splits(
+                                    &mut data.timer.write().unwrap(),
+                                    #[cfg(feature = "auto-splitting")]
+                                    &data.auto_splitter,
+                                );
                             or_show_error(result);
                         } else {
                             self.intent = self.intent.with(Intent::SAVE_SPLITS_AS);
