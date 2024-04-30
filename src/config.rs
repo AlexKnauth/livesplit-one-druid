@@ -296,6 +296,7 @@ impl Config {
         runtime: &livesplit_core::auto_splitting::Runtime,
     ) -> Result<()> {
         if let Some(path) = &self.splits.current {
+            #[cfg(feature = "auto-splitting")]
             runtime.update_timer_auto_splitter_settings(timer);
             let mut buf = String::new();
             save_timer(timer, &mut buf).context("Failed saving the splits.")?;
@@ -317,6 +318,7 @@ impl Config {
         runtime: &livesplit_core::auto_splitting::Runtime,
         path: PathBuf,
     ) -> Result<()> {
+        #[cfg(feature = "auto-splitting")]
         runtime.update_timer_auto_splitter_settings(timer);
         let mut buf = String::new();
         save_timer(timer, &mut buf).context("Failed saving the splits.")?;
