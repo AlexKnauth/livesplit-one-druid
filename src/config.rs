@@ -425,7 +425,9 @@ impl Config {
         self.general.auto_splitter = Some(path.into());
         self.save_config();
         #[cfg(feature = "auto-splitting")]
-        runtime.reload(shared_timer.clone())?;
+        runtime.unload()?;
+        #[cfg(feature = "auto-splitting")]
+        runtime.load(path.into(), shared_timer.clone())?;
         Ok(())
     }
 
