@@ -63,6 +63,7 @@ pub struct MainState {
     layout_editor: Option<OpenWindow<layout_editor::State>>,
     settings_editor: Option<OpenWindow<settings_editor::State>>,
     image_cache: Rc<RefCell<ImageCache>>,
+    mouse_pass_through: bool,
 }
 
 pub struct LayoutData {
@@ -117,6 +118,7 @@ impl MainState {
             layout_editor: None,
             settings_editor: None,
             image_cache: Rc::new(RefCell::new(ImageCache::new())),
+            mouse_pass_through: false,
         }
     }
 }

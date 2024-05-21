@@ -691,6 +691,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
             }
             _ => {}
         }
+        self.set_mouse_pass_through_while_running(ctx, data);
         self.inner.event(ctx, event, data, env)
     }
 
@@ -775,6 +776,18 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                 .set_size(Size::new(new_width as _, new_height as _));
         }
         data.image_cache.borrow_mut().collect();
+    }
+}
+
+impl<T: Widget<MainState>> WithMenu<T> {
+    fn set_mouse_pass_through_while_running(&mut self, ctx: &mut EventCtx, data: &mut MainState) {
+        let timer = data.timer.read().unwrap();
+        let current_phase = timer.current_phase();
+        let mouse_pass_through = current_phase == TimerPhase::Running && !ctx.window().is_foreground_window();
+        if data.mouse_pass_through != mouse_pass_through {
+            data.mouse_pass_through = mouse_pass_through;
+            ctx.window().set_mouse_pass_through(mouse_pass_through);
+        }
     }
 }
 
