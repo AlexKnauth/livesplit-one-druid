@@ -1,8 +1,9 @@
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use druid::WindowDesc;
+#[cfg(feature = "auto-splitting")]
+use livesplit_core::event::TimerAutoSplitterSettings;
 use livesplit_core::{
-    event::TimerAutoSplitterSettings,
     layout::{self, Layout, LayoutSettings},
     run::{
         parser::{composite, TimerKind},
