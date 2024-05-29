@@ -3,19 +3,16 @@ use std::{cell::RefCell, rc::Rc};
 use druid::{
     commands,
     lens::Identity,
-    text::{Formatter, Selection, Validation, ValidationError},
     theme,
     widget::{
-        Button, ClipBox, Container, CrossAxisAlignment, Flex, Label, List, ListIter,
-        Painter, Scroll, Switch, TextBox,
+        Button, ClipBox, Container, CrossAxisAlignment, Flex, Label, List, ListIter, Painter,
+        Scroll, Switch, TextBox,
     },
-    BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LensExt,
-    LifeCycle, LifeCycleCtx, LinearGradient, Menu, MenuItem, PaintCtx, RenderContext, Selector,
-    Size, TextAlignment, UnitPoint, UpdateCtx, Widget, WidgetExt,
+    BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, LensExt, LifeCycle, LifeCycleCtx,
+    LinearGradient, Menu, MenuItem, PaintCtx, RenderContext, Selector, Size, TextAlignment,
+    UnitPoint, UpdateCtx, Widget, WidgetExt,
 };
-use livesplit_core::{
-    run::editor, settings::ImageCache, RunEditor, TimeSpan, TimingMethod
-};
+use livesplit_core::{run::editor, settings::ImageCache, RunEditor, TimeSpan, TimingMethod};
 
 use crate::{
     config::Config,
@@ -130,7 +127,11 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(editor: RunEditor, config: Rc<RefCell<Config>>, image_cache: Rc<RefCell<ImageCache>>) -> Self {
+    pub fn new(
+        editor: RunEditor,
+        config: Rc<RefCell<Config>>,
+        image_cache: Rc<RefCell<ImageCache>>,
+    ) -> Self {
         let state = Rc::new(editor.state(&mut image_cache.borrow_mut()));
         // let image = image::load_from_memory(state.icon_change.as_deref().unwrap())
         //     .unwrap()
@@ -221,26 +222,6 @@ fn category_name() -> impl Widget<State> {
                 ))
                 .expand_width(),
         )
-}
-
-struct TimeSpanFormatter;
-
-impl Formatter<String> for TimeSpanFormatter {
-    fn format(&self, value: &String) -> String {
-        value.clone()
-    }
-
-    fn validate_partial_input(&self, input: &str, _sel: &Selection) -> Validation {
-        match input.parse::<TimeSpan>() {
-            Ok(_) => Validation::success(),
-            Err(e) => Validation::failure(e),
-        }
-    }
-
-    fn value(&self, input: &str) -> Result<String, ValidationError> {
-        input.parse::<TimeSpan>().map_err(ValidationError::new)?;
-        Ok(input.to_string())
-    }
 }
 
 fn offset() -> impl Widget<State> {
@@ -630,7 +611,8 @@ fn tabs() -> impl Widget<State> {
                             let mut editor = state.editor.borrow_mut();
                             let editor = editor.as_mut().unwrap();
                             editor.select_timing_method(TimingMethod::RealTime);
-                            state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                            state.state =
+                                Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                             state.image_cache.borrow_mut().collect();
                         })
                         .env_scope(|env, data: &State| {
@@ -646,7 +628,8 @@ fn tabs() -> impl Widget<State> {
                             let mut editor = state.editor.borrow_mut();
                             let editor = editor.as_mut().unwrap();
                             editor.select_timing_method(TimingMethod::GameTime);
-                            state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
+                            state.state =
+                                Rc::new(editor.state(&mut state.image_cache.borrow_mut()));
                             state.image_cache.borrow_mut().collect();
                         })
                         .env_scope(|env, data: &State| {
@@ -681,18 +664,6 @@ fn run_editor() -> impl Widget<State> {
         )
         .with_spacer(SPACING)
         .with_flex_child(body(), 1.0)
-}
-
-struct Unwrap;
-
-impl<T> Lens<Option<T>, T> for Unwrap {
-    fn with<V, F: FnOnce(&T) -> V>(&self, data: &Option<T>, f: F) -> V {
-        f(data.as_ref().unwrap())
-    }
-
-    fn with_mut<V, F: FnOnce(&mut T) -> V>(&self, data: &mut Option<T>, f: F) -> V {
-        f(data.as_mut().unwrap())
-    }
 }
 
 struct RunEditorWidget<T> {

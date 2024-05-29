@@ -1,7 +1,4 @@
-use std::{
-    path::Path,
-    sync::Arc,
-};
+use std::{path::Path, sync::Arc};
 
 use druid::{
     commands,
@@ -9,21 +6,18 @@ use druid::{
     piet::PietImage,
     theme,
     widget::{Controller, Flex},
-    AppDelegate, AppLauncher, BoxConstraints, DelegateCtx, Env, Event, EventCtx,
-    FileDialogOptions, FileInfo, FileSpec, LayoutCtx, LifeCycle, LifeCycleCtx,
-    Menu, MenuItem, Point, Selector, Size, UpdateCtx, Widget,
-    WidgetExt, WindowDesc, WindowId, WindowLevel,
+    AppDelegate, AppLauncher, BoxConstraints, DelegateCtx, Env, Event, EventCtx, FileDialogOptions,
+    FileInfo, FileSpec, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, MenuItem, Point, Selector, Size,
+    UpdateCtx, Widget, WidgetExt, WindowDesc, WindowId, WindowLevel,
 };
-use livesplit_core::{
-    LayoutEditor, RunEditor, TimerPhase, TimingMethod,
-};
+use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
 // use native_dialog::MessageType;
 
 use crate::{
     config::or_show_error,
     consts::{
-        BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP,
-        PRIMARY_LIGHT, SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
+        BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP, PRIMARY_LIGHT,
+        SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
     },
     layout_editor, run_editor, settings_editor, software_renderer, LayoutEditorLens, MainState,
     OpenWindow, RunEditorLens, SettingsEditorLens, HOTKEY_SYSTEM,
@@ -106,7 +100,8 @@ const CONTEXT_MENU_EDIT_LAYOUT: Selector = Selector::new("context-menu-edit-layo
 const CONTEXT_MENU_OPEN_LAYOUT: Selector<FileInfo> = Selector::new("context-menu-open-layout");
 const CONTEXT_MENU_SAVE_LAYOUT_AS: Selector<FileInfo> =
     Selector::new("context-menu-save-layout-as");
-const CONTEXT_MENU_OPEN_AUTO_SPLITTER: Selector<FileInfo> = Selector::new("context-menu-open-auto-splitter");
+const CONTEXT_MENU_OPEN_AUTO_SPLITTER: Selector<FileInfo> =
+    Selector::new("context-menu-open-auto-splitter");
 const CONTEXT_MENU_START_OR_SPLIT: Selector = Selector::new("context-menu-start-or-split");
 const CONTEXT_MENU_UNDO_SPLIT: Selector = Selector::new("context-menu-undo-split");
 const CONTEXT_MENU_SKIP_SPLIT: Selector = Selector::new("context-menu-skip-split");
@@ -306,9 +301,11 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                         CONTEXT_MENU_SET_INTENT.with(Intent::SAVE_LAYOUT_AS),
                                     )),
                             )
-                            .entry(MenuItem::new("Open Auto-splitter...").command(
-                                CONTEXT_MENU_SET_INTENT.with(Intent::OPEN_AUTO_SPLITTER),
-                            ))
+                            .entry(
+                                MenuItem::new("Open Auto-splitter...").command(
+                                    CONTEXT_MENU_SET_INTENT.with(Intent::OPEN_AUTO_SPLITTER),
+                                ),
+                            )
                             .separator()
                             .entry(control_menu)
                             .entry(compare_against)
@@ -350,7 +347,11 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     ctx.new_window(window);
                     data.run_editor = Some(OpenWindow {
                         id: window_id,
-                        state: run_editor::State::new(editor, data.config.clone(), data.image_cache.clone()),
+                        state: run_editor::State::new(
+                            editor,
+                            data.config.clone(),
+                            data.image_cache.clone(),
+                        ),
                     });
                 } else if let Some(file_info) = command.get(CONTEXT_MENU_OPEN_SPLITS) {
                     let result = data.config.borrow_mut().open_splits(
@@ -533,14 +534,11 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     if self.intent.contains(Intent::SAVE_SPLITS) {
                         self.intent = self.intent.without(Intent::SAVE_SPLITS);
                         if data.config.borrow().can_directly_save_splits() {
-                            let result = data
-                                .config
-                                .borrow_mut()
-                                .save_splits(
-                                    &mut data.timer.write().unwrap(),
-                                    #[cfg(feature = "auto-splitting")]
-                                    &data.auto_splitter,
-                                );
+                            let result = data.config.borrow_mut().save_splits(
+                                &mut data.timer.write().unwrap(),
+                                #[cfg(feature = "auto-splitting")]
+                                &data.auto_splitter,
+                            );
                             or_show_error(result);
                         } else {
                             self.intent = self.intent.with(Intent::SAVE_SPLITS_AS);

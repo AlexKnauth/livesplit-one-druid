@@ -1,4 +1,3 @@
-
 use druid::{
     piet::{ImageFormat, InterpolationMode, PietImage},
     PaintCtx, Point, Rect, RenderContext,

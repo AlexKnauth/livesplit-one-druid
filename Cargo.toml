@@ -9,7 +9,7 @@ build = "build.rs"
 
 [dependencies]
 druid = { git = "https://github.com/AlexKnauth/druid", branch = "mouse_pass_through" }
-livesplit-core = { git = "https://github.com/AlexKnauth/livesplit-core", branch = "legacy-raw-xml", features = ["font-loading", "software-rendering"] }
+livesplit-core = { git = "https://github.com/AlexKnauth/livesplit-core", branch = "legacy_raw_xml-3", features = ["font-loading", "software-rendering"] }
 image = "0.25.0"
 log = { version = "0.4.6", features = ["serde"] }
 serde = { version = "1.0.85", features = ["derive", "rc"] }

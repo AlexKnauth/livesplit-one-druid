@@ -1,14 +1,11 @@
 use std::{cell::RefCell, rc::Rc};
 
 use druid::{
-    commands,
-    theme,
-    widget::{
-        Button, CrossAxisAlignment, Flex, Label, List, ListIter, Scroll,
-    },
-    BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
-    LifeCycleCtx, LinearGradient, LocalizedString, Menu, MenuItem, PaintCtx, RenderContext,
-    Selector, Size, UnitPoint, UpdateCtx, Widget, WidgetExt,
+    commands, theme,
+    widget::{Button, CrossAxisAlignment, Flex, Label, List, ListIter, Scroll},
+    BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle, LifeCycleCtx,
+    LinearGradient, LocalizedString, Menu, MenuItem, PaintCtx, RenderContext, Selector, Size,
+    UnitPoint, UpdateCtx, Widget, WidgetExt,
 };
 use livesplit_core::{
     component,
@@ -106,7 +103,11 @@ impl ListIter<SettingsRow> for State {
                 if self.on_component_settings_tab {
                     editor.set_component_settings_value(index, row.value.clone());
                 } else {
-                    editor.set_general_settings_value(index, row.value.clone(), &self.image_cache.borrow());
+                    editor.set_general_settings_value(
+                        index,
+                        row.value.clone(),
+                        &self.image_cache.borrow(),
+                    );
                 }
                 changed = true;
             }

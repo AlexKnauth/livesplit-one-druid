@@ -7,7 +7,9 @@ use std::{
 };
 
 use druid::{Data, Lens, WindowId};
-use livesplit_core::{layout::LayoutState, settings::ImageCache, HotkeySystem, Layout, SharedTimer, Timer};
+use livesplit_core::{
+    layout::LayoutState, settings::ImageCache, HotkeySystem, Layout, SharedTimer, Timer,
+};
 use mimalloc::MiMalloc;
 use once_cell::sync::Lazy;
 
@@ -32,7 +34,7 @@ mod timer_form;
 mod software_renderer;
 // mod piet_renderer;
 
-static HOTKEY_SYSTEM: RwLock<Option<HotkeySystem>> = RwLock::new(None);
+static HOTKEY_SYSTEM: RwLock<Option<HotkeySystem<SharedTimer>>> = RwLock::new(None);
 static FONT_FAMILIES: Lazy<Arc<[Arc<str>]>> = Lazy::new(|| {
     let mut db = fontdb::Database::new();
     db.load_system_fonts();
@@ -56,7 +58,7 @@ pub struct MainState {
     layout_data: Rc<RefCell<LayoutData>>,
     #[data(ignore)]
     #[cfg(feature = "auto-splitting")]
-    auto_splitter: Rc<livesplit_core::auto_splitting::Runtime>,
+    auto_splitter: Rc<livesplit_core::auto_splitting::Runtime<SharedTimer>>,
     #[data(ignore)]
     config: Rc<RefCell<Config>>,
     run_editor: Option<OpenWindow<run_editor::State>>,

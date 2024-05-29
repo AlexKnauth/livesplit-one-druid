@@ -1,8 +1,4 @@
-use std::{
-    borrow::Cow,
-    mem,
-    ops::Range,
-};
+use std::{borrow::Cow, mem, ops::Range};
 
 use druid::{
     piet::{self, PietTextLayoutBuilder, TextAttribute, TextLayoutBuilder},

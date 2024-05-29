@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use druid::WindowDesc;
 use livesplit_core::{
+    event::TimerAutoSplitterSettings,
     layout::{self, Layout, LayoutSettings},
     run::{
         parser::{composite, TimerKind},
@@ -222,7 +223,7 @@ impl Config {
     }
 
     // TODO: Just directly construct the HotkeySystem from the config.
-    pub fn configure_hotkeys(&self, hotkeys: &mut HotkeySystem) {
+    pub fn configure_hotkeys(&self, hotkeys: &mut HotkeySystem<SharedTimer>) {
         hotkeys.set_config(self.hotkeys).ok();
     }
 
@@ -251,8 +252,9 @@ impl Config {
         &mut self,
         shared_timer: &SharedTimer,
         layout_data: &mut LayoutData,
-        #[cfg(feature = "auto-splitting")]
-        auto_splitter: &livesplit_core::auto_splitting::Runtime,
+        #[cfg(feature = "auto-splitting")] auto_splitter: &livesplit_core::auto_splitting::Runtime<
+            SharedTimer,
+        >,
         path: PathBuf,
     ) -> Result<()> {
         {
@@ -292,12 +294,13 @@ impl Config {
     pub fn save_splits(
         &mut self,
         timer: &mut Timer,
-        #[cfg(feature = "auto-splitting")]
-        runtime: &livesplit_core::auto_splitting::Runtime,
+        #[cfg(feature = "auto-splitting")] runtime: &livesplit_core::auto_splitting::Runtime<
+            SharedTimer,
+        >,
     ) -> Result<()> {
         if let Some(path) = &self.splits.current {
             #[cfg(feature = "auto-splitting")]
-            runtime.update_timer_auto_splitter_settings(timer);
+            timer.set_auto_splitter_settings(runtime.settings_map().unwrap_or_default());
             let mut buf = String::new();
             save_timer(timer, &mut buf).context("Failed saving the splits.")?;
             fs::write(path, &buf).context("Failed writing the file.")?;
@@ -314,12 +317,13 @@ impl Config {
     pub fn save_splits_as(
         &mut self,
         timer: &mut Timer,
-        #[cfg(feature = "auto-splitting")]
-        runtime: &livesplit_core::auto_splitting::Runtime,
+        #[cfg(feature = "auto-splitting")] runtime: &livesplit_core::auto_splitting::Runtime<
+            SharedTimer,
+        >,
         path: PathBuf,
     ) -> Result<()> {
         #[cfg(feature = "auto-splitting")]
-        runtime.update_timer_auto_splitter_settings(timer);
+        timer.set_auto_splitter_settings(runtime.settings_map().unwrap_or_default());
         let mut buf = String::new();
         save_timer(timer, &mut buf).context("Failed saving the splits.")?;
         fs::write(&path, &buf).context("Failed writing the file.")?;
@@ -416,10 +420,10 @@ impl Config {
 
     pub fn open_auto_splitter(
         &mut self,
-        #[cfg(feature = "auto-splitting")]
-        shared_timer: &SharedTimer,
-        #[cfg(feature = "auto-splitting")]
-        runtime: &livesplit_core::auto_splitting::Runtime,
+        #[cfg(feature = "auto-splitting")] shared_timer: &SharedTimer,
+        #[cfg(feature = "auto-splitting")] runtime: &livesplit_core::auto_splitting::Runtime<
+            SharedTimer,
+        >,
         path: &Path,
     ) -> Result<()> {
         self.general.auto_splitter = Some(path.into());
@@ -490,7 +494,11 @@ impl Config {
     }
 
     #[cfg(feature = "auto-splitting")]
-    pub fn maybe_load_auto_splitter(&self, runtime: &livesplit_core::auto_splitting::Runtime, timer: SharedTimer) {
+    pub fn maybe_load_auto_splitter(
+        &self,
+        runtime: &livesplit_core::auto_splitting::Runtime<SharedTimer>,
+        timer: SharedTimer,
+    ) {
         if let Some(auto_splitter) = &self.general.auto_splitter {
             if let Err(e) = runtime.load(auto_splitter.clone(), timer) {
                 // TODO: Error chain
@@ -507,7 +515,7 @@ fn default_run() -> Run {
 }
 
 pub fn show_error(error: anyhow::Error) {
-    // this MessageDialog is for displaying errors, 
+    // this MessageDialog is for displaying errors,
     // so I guess it's fine if it crashes? if it was going to crash anyway?
     let _ = native_dialog::MessageDialog::new()
         .set_type(native_dialog::MessageType::Error)
