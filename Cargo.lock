@@ -496,9 +496,9 @@ dependencies = [
 
 [[package]]
 name = "clang-sys"
-version = "1.8.0"
+version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a483f3cbf7cec2e153d424d0e92329d816becc6421389bd494375c6065921b9b"
+checksum = "0b023947811758c97c59bf9d1c188fd619ad4718dcaa767947df1cadb14f39f4"
 dependencies = [
  "glob",
  "libc",
@@ -1963,7 +1963,7 @@ checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
 [[package]]
 name = "livesplit-auto-splitting"
 version = "0.1.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml-3#31fb29b6872f9a84d7458b6f2f978df1cad94b73"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml-3#9b72f60c133d3c06c753ad7bd842d4e17e8e1534"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -1985,7 +1985,7 @@ dependencies = [
 [[package]]
 name = "livesplit-core"
 version = "0.13.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml-3#31fb29b6872f9a84d7458b6f2f978df1cad94b73"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml-3#9b72f60c133d3c06c753ad7bd842d4e17e8e1534"
 dependencies = [
  "base64-simd",
  "bytemuck",
@@ -2020,7 +2020,7 @@ dependencies = [
 [[package]]
 name = "livesplit-hotkey"
 version = "0.7.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml-3#31fb29b6872f9a84d7458b6f2f978df1cad94b73"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml-3#9b72f60c133d3c06c753ad7bd842d4e17e8e1534"
 dependencies = [
  "bitflags 2.5.0",
  "cfg-if",
@@ -2059,7 +2059,7 @@ dependencies = [
 [[package]]
 name = "livesplit-title-abbreviations"
 version = "0.3.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml-3#31fb29b6872f9a84d7458b6f2f978df1cad94b73"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml-3#9b72f60c133d3c06c753ad7bd842d4e17e8e1534"
 
 [[package]]
 name = "lock_api"
@@ -3454,9 +3454,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.37.0"
+version = "1.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1adbebffeca75fcfd058afa480fb6c0b81e165a0323f9c9d39c9697e37c46787"
+checksum = "ba4f4a02a7a80d6f274636f0aa95c7e383b912d41fe721a31f29e29698585a4a"
 dependencies = [
  "backtrace",
  "pin-project-lite",
