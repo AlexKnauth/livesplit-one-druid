@@ -26,7 +26,7 @@ cargo run --release
 The config file and log file are located in the local data directory from [data_local_dir][data_local_dir]:
 - Windows: `C:\Users\<name>\AppData\Local\LiveSplit\LiveSplit One\data\config.yml`
 - Mac: `/Users/<name>/Library/Application Support/org.LiveSplit.LiveSplit-One/config.yml`
-- Linux: `/home/<name>/.local/share/livesplitone/config.yml`
+- Linux: `/home/<name>/.local/share/livesplitone/config.yml` or `/root/.local/share/livesplitone/config.yml` if running as `sudo`
 
   [data_local_dir]: https://docs.rs/directories/latest/directories/struct.ProjectDirs.html#method.data_local_dir
   [livesplit-core]: https://github.com/LiveSplit/livesplit-core
