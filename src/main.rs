@@ -97,8 +97,7 @@ impl MainState {
         let layout = config.parse_layout_or_default(&timer);
 
         let timer = timer.into_shared();
-        let mut hotkey_system = HotkeySystem::new(timer.clone()).unwrap();
-        config.configure_hotkeys(&mut hotkey_system);
+        let hotkey_system = config.configure_hotkeys(timer.clone());
         *HOTKEY_SYSTEM.write().unwrap() = Some(hotkey_system);
 
         #[cfg(feature = "auto-splitting")]
