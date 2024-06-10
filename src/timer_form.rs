@@ -770,8 +770,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
             &layout_data.layout_state,
             &data.image_cache.borrow(),
         ) {
-            ctx.window()
-                .set_size(Size::new(new_width, new_height));
+            ctx.window().set_size(Size::new(new_width, new_height));
         }
         data.image_cache.borrow_mut().collect();
     }
