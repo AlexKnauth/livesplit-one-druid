@@ -763,7 +763,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
         //     &data.image_cache.borrow(),
         // );
 
-        if let Some([new_width, new_height]) = software_renderer::render_scene(
+        if let Some((new_width, new_height)) = software_renderer::render_scene(
             ctx,
             &mut self.bottom_image,
             &mut self.renderer,
@@ -771,7 +771,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
             &data.image_cache.borrow(),
         ) {
             ctx.window()
-                .set_size(Size::new(new_width as _, new_height as _));
+                .set_size(Size::new(new_width, new_height));
         }
         data.image_cache.borrow_mut().collect();
     }
