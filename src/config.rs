@@ -4,6 +4,7 @@ use druid::WindowDesc;
 #[cfg(feature = "auto-splitting")]
 use livesplit_core::event::TimerAutoSplitterSettings;
 use livesplit_core::{
+    event,
     layout::{self, Layout, LayoutSettings},
     run::{
         parser::{composite, TimerKind},
@@ -223,9 +224,9 @@ impl Config {
             .unwrap_or_else(Layout::default_layout)
     }
 
-    // TODO: Just directly construct the HotkeySystem from the config.
-    pub fn configure_hotkeys(&self, hotkeys: &mut HotkeySystem<SharedTimer>) {
-        hotkeys.set_config(self.hotkeys).ok();
+    // Just directly construct the HotkeySystem from the config.
+    pub fn configure_hotkeys<E: event::Sink + Clone + Send + 'static>(&self, event_sink: E) -> HotkeySystem<E> {
+        HotkeySystem::with_config(event_sink, self.hotkeys).unwrap()
     }
 
     pub fn configure_timer(&self, timer: &mut Timer) {
