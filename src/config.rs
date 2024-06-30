@@ -225,11 +225,11 @@ impl Config {
     }
 
     // Just directly construct the HotkeySystem from the config.
-    pub fn configure_hotkeys<E: event::Sink + Clone + Send + 'static>(
+    pub fn configure_hotkeys<E: event::CommandSink + Clone + Send + 'static>(
         &self,
-        event_sink: E,
+        command_sink: E,
     ) -> HotkeySystem<E> {
-        HotkeySystem::with_config(event_sink, self.hotkeys).unwrap()
+        HotkeySystem::with_config(command_sink, self.hotkeys).unwrap()
     }
 
     pub fn configure_timer(&self, timer: &mut Timer) {
