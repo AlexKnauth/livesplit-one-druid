@@ -288,10 +288,8 @@ impl Config {
             }
         }
 
-        /*
         #[cfg(feature = "auto-splitting")]
         auto_splitter.reload(shared_timer.clone())?;
-        */
 
         Ok(())
     }
@@ -308,10 +306,8 @@ impl Config {
         >,
     ) -> Result<()> {
         if let Some(path) = &self.splits.current {
-            /*
             #[cfg(feature = "auto-splitting")]
-            timer.set_auto_splitter_settings(runtime.settings_map().unwrap_or_default());
-            */
+            timer.run_auto_splitter_settings_map_store(runtime.settings_map().unwrap_or_default());
             let mut buf = String::new();
             save_timer(timer, &mut buf).context("Failed saving the splits.")?;
             fs::write(path, &buf).context("Failed writing the file.")?;
@@ -333,10 +329,8 @@ impl Config {
         >,
         path: PathBuf,
     ) -> Result<()> {
-        /*
         #[cfg(feature = "auto-splitting")]
-        timer.set_auto_splitter_settings(runtime.settings_map().unwrap_or_default());
-        */
+        timer.run_auto_splitter_settings_map_store(runtime.settings_map().unwrap_or_default());
         let mut buf = String::new();
         save_timer(timer, &mut buf).context("Failed saving the splits.")?;
         fs::write(&path, &buf).context("Failed writing the file.")?;
