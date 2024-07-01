@@ -240,7 +240,7 @@ dependencies = [
  "bitflags 2.5.0",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
+ "itertools 0.11.0",
  "lazy_static",
  "lazycell",
  "proc-macro2",
@@ -1963,7 +1963,7 @@ checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
 [[package]]
 name = "livesplit-auto-splitting"
 version = "0.1.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#da0d66ba0afaadd8d1df370e243567d034e795a5"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#d204877dfaf931b5443c2efd298180bffd8c51ab"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -1985,7 +1985,7 @@ dependencies = [
 [[package]]
 name = "livesplit-core"
 version = "0.13.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#da0d66ba0afaadd8d1df370e243567d034e795a5"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#d204877dfaf931b5443c2efd298180bffd8c51ab"
 dependencies = [
  "base64-simd",
  "bytemuck",
@@ -2020,7 +2020,7 @@ dependencies = [
 [[package]]
 name = "livesplit-hotkey"
 version = "0.7.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#da0d66ba0afaadd8d1df370e243567d034e795a5"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#d204877dfaf931b5443c2efd298180bffd8c51ab"
 dependencies = [
  "bitflags 2.5.0",
  "cfg-if",
@@ -2059,7 +2059,7 @@ dependencies = [
 [[package]]
 name = "livesplit-title-abbreviations"
 version = "0.3.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#da0d66ba0afaadd8d1df370e243567d034e795a5"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#d204877dfaf931b5443c2efd298180bffd8c51ab"
 
 [[package]]
 name = "lock_api"
