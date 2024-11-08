@@ -4,6 +4,7 @@ use std::{
     cell::RefCell,
     rc::Rc,
     sync::{Arc, RwLock},
+    env,
 };
 
 use druid::{Data, Lens, WindowId};
@@ -169,7 +170,8 @@ impl Lens<MainState, settings_editor::State> for SettingsEditorLens {
 }
 
 fn main() {
-    let config = Config::load();
+    // This is clearly super fragile with cli options, but I don't know how to handle them properly
+    let config = Config::load(env::args().nth(1));
     let window = config.build_window();
     timer_form::launch(MainState::new(config), window);
 }

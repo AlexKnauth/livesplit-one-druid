@@ -131,8 +131,24 @@ static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| {
 });
 
 impl Config {
-    pub fn load() -> Self {
-        Self::parse().unwrap_or_default()
+    pub fn load(split_file: Option<String>) -> Self {
+        let cfg = Self::parse().unwrap_or_default();
+        cfg.load_path_splits(split_file)
+    }
+
+    /// Replace the current splits file with the given path during load, before the window is initialized
+    /// If the file path is invalid it keeps the split file specified in the config
+    fn load_path_splits(mut self, split_file: Option<String>) -> Self {
+        if split_file.is_none() { return self; };
+        let split_file = split_file.unwrap();
+        let path = PathBuf::from(split_file);
+        // This reads the file twice, once now and again below when splits are opened
+        let maybe_run = Config::parse_run_from_path(&path);
+        if maybe_run.is_none() { return self; };
+        let (run, _) = maybe_run.unwrap();
+        self.splits.add_to_history(&run);
+        self.splits.current = Some(path);
+        self
     }
 
     fn save_config(&self) -> Option<()> {
@@ -154,13 +170,17 @@ impl Config {
         &self.splits.history
     }
 
-    fn parse_run(&self) -> Option<(Run, bool)> {
-        let path = self.splits.current.clone()?;
+    fn parse_run_from_path(path: &Path) -> Option<(Run, bool)> {
         let file = fs::read(&path).ok()?;
         let parsed_run = composite::parse(&file, Some(&path)).ok()?;
         let run = parsed_run.run;
         let can_save = parsed_run.kind == TimerKind::LiveSplit;
         Some((run, can_save))
+    }
+
+    fn parse_run(&self) -> Option<(Run, bool)> {
+        let path = self.splits.current.clone()?;
+        Config::parse_run_from_path(&path)
     }
 
     pub fn parse_run_or_default(&mut self) -> Run {
