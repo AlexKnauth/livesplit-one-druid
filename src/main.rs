@@ -4,9 +4,9 @@ use std::{
     cell::RefCell,
     rc::Rc,
     sync::{Arc, RwLock},
-    env,
 };
 
+use clap::Parser;
 use druid::{Data, Lens, WindowId};
 use livesplit_core::{
     layout::LayoutState, settings::ImageCache, HotkeySystem, Layout, SharedTimer, Timer,
@@ -19,6 +19,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 use crate::config::Config;
 
+mod cli;
 mod color_button;
 mod combo_box;
 mod config;
@@ -170,8 +171,8 @@ impl Lens<MainState, settings_editor::State> for SettingsEditorLens {
 }
 
 fn main() {
-    // This is clearly super fragile with cli options, but I don't know how to handle them properly
-    let config = Config::load(env::args().nth(1));
+    let cli = cli::Cli::parse();
+    let config = Config::load(cli.split_file);
     let window = config.build_window();
     timer_form::launch(MainState::new(config), window);
 }

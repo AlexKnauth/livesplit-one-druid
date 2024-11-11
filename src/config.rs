@@ -131,23 +131,22 @@ static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| {
 });
 
 impl Config {
-    pub fn load(split_file: Option<String>) -> Self {
+    pub fn load(split_file: Option<PathBuf>) -> Self {
         let cfg = Self::parse().unwrap_or_default();
         cfg.load_path_splits(split_file)
     }
 
     /// Replace the current splits file with the given path during load, before the window is initialized
     /// If the file path is invalid it keeps the split file specified in the config
-    fn load_path_splits(mut self, split_file: Option<String>) -> Self {
+    fn load_path_splits(mut self, split_file: Option<PathBuf>) -> Self {
         if split_file.is_none() { return self; };
         let split_file = split_file.unwrap();
-        let path = PathBuf::from(split_file);
         // This reads the file twice, once now and again below when splits are opened
-        let maybe_run = Config::parse_run_from_path(&path);
+        let maybe_run = Config::parse_run_from_path(&split_file);
         if maybe_run.is_none() { return self; };
         let (run, _) = maybe_run.unwrap();
         self.splits.add_to_history(&run);
-        self.splits.current = Some(path);
+        self.splits.current = Some(split_file);
         self
     }
 
