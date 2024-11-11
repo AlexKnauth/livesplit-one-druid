@@ -172,7 +172,7 @@ impl Lens<MainState, settings_editor::State> for SettingsEditorLens {
 
 fn main() {
     let cli = cli::Cli::parse();
-    let config = Config::load(cli.split_file);
+    let config = Config::load(cli);
     let window = config.build_window();
     timer_form::launch(MainState::new(config), window);
 }
