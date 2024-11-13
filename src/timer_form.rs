@@ -421,15 +421,15 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     );
                     or_show_error(result);
                 } else if command.is(CONTEXT_MENU_START_OR_SPLIT) {
-                    data.timer.write().unwrap().split_or_start();
+                    data.timer.write().unwrap().split_or_start().ok();
                 } else if command.is(CONTEXT_MENU_UNDO_SPLIT) {
-                    data.timer.write().unwrap().undo_split();
+                    data.timer.write().unwrap().undo_split().ok();
                 } else if command.is(CONTEXT_MENU_SKIP_SPLIT) {
-                    data.timer.write().unwrap().skip_split();
+                    data.timer.write().unwrap().skip_split().ok();
                 } else if command.is(CONTEXT_MENU_TOGGLE_PAUSE) {
-                    data.timer.write().unwrap().toggle_pause();
+                    data.timer.write().unwrap().toggle_pause().ok();
                 } else if command.is(CONTEXT_MENU_UNDO_ALL_PAUSES) {
-                    data.timer.write().unwrap().undo_all_pauses();
+                    data.timer.write().unwrap().undo_all_pauses().ok();
                 } else if let Some(comparison) = command.get(CONTEXT_MENU_SET_COMPARISON) {
                     // The comparison should always exist.
                     let _ = data
@@ -504,7 +504,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         } else {
                             true
                         };
-                        data.timer.write().unwrap().reset(wants_to_save_times);
+                        data.timer.write().unwrap().reset(wants_to_save_times).ok();
                     }
 
                     if self.intent.contains(Intent::MAYBE_SAVE_SPLITS) {
