@@ -6,6 +6,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use clap::Parser;
 use druid::{Data, Lens, WindowId};
 use livesplit_core::{
     layout::LayoutState, settings::ImageCache, HotkeySystem, Layout, SharedTimer, Timer,
@@ -18,6 +19,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 use crate::config::Config;
 
+mod cli;
 mod color_button;
 mod combo_box;
 mod config;
@@ -169,7 +171,8 @@ impl Lens<MainState, settings_editor::State> for SettingsEditorLens {
 }
 
 fn main() {
-    let config = Config::load();
+    let cli = cli::Cli::parse();
+    let config = Config::load(cli);
     let window = config.build_window();
     timer_form::launch(MainState::new(config), window);
 }
