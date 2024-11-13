@@ -22,7 +22,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{timer_form, LayoutData, MainState, cli};
+use crate::{cli, timer_form, LayoutData, MainState};
 
 #[derive(Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -143,27 +143,37 @@ impl Config {
     /// Replace the current splits file with the given path during load, before the window is initialized
     /// If the file path is invalid it keeps the split file specified in the config
     fn load_splits_path(&mut self, split_file: Option<PathBuf>) {
-        if split_file.is_none() { return; };
+        if split_file.is_none() {
+            return;
+        };
         let split_file = split_file.unwrap();
         // This reads the file twice, once now and again below when splits are opened
         let maybe_run = Config::parse_run_from_path(&split_file);
-        if maybe_run.is_none() { return; };
+        if maybe_run.is_none() {
+            return;
+        };
         let (run, _) = maybe_run.unwrap();
         self.splits.add_to_history(&run);
         self.splits.current = Some(split_file);
     }
 
     fn load_layout_path(&mut self, layout_file: Option<PathBuf>) {
-        if layout_file.is_none() { return; };
+        if layout_file.is_none() {
+            return;
+        };
         let layout_file = layout_file.unwrap();
         let maybe_layout = Self::parse_layout_with_path(&layout_file);
-        if maybe_layout.is_err() { return; }
+        if maybe_layout.is_err() {
+            return;
+        }
         self.general.can_save_layout = true;
         self.general.layout = Some(layout_file);
     }
 
     fn load_autosplitter_path(&mut self, autosplitter_file: Option<PathBuf>) {
-        if autosplitter_file.is_none() { return; };
+        if autosplitter_file.is_none() {
+            return;
+        };
         self.general.auto_splitter = autosplitter_file;
     }
 
