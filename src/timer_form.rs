@@ -778,11 +778,14 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
 
 impl<T: Widget<MainState>> WithMenu<T> {
     fn set_mouse_pass_through_while_running(&mut self, ctx: &mut EventCtx, data: &mut MainState) {
+        /*
         let pass_while_running = data
             .layout_data
             .borrow()
             .layout_state
             .mouse_pass_through_while_running;
+        */
+        let pass_while_running = false;
         let timer = data.timer.read().unwrap();
         let current_phase = timer.current_phase();
         let mouse_pass_through = pass_while_running
