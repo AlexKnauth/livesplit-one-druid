@@ -2293,7 +2293,6 @@ dependencies = [
  "time",
  "tiny-skia",
  "tiny-skia-path",
- "triple_buffer",
  "windows-sys 0.59.0",
 ]
 
@@ -3888,15 +3887,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "triple_buffer"
-version = "8.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e66931c8eca6381f0d34656a9341f09bd462010488c1a3bc0acd3f2d08dffce"
-dependencies = [
- "crossbeam-utils",
 ]
 
 [[package]]
