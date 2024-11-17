@@ -2242,7 +2242,7 @@ checksum = "643cb0b8d4fcc284004d5fd0d67ccf61dfffadb7f75e1e71bc420f4688a3a704"
 [[package]]
 name = "livesplit-auto-splitting"
 version = "0.1.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#858ec1453a5f10b904942b156b1dd8eb6d1c8b7d"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#3b818e0cf729056880494338f4bae42423655326"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -2265,7 +2265,7 @@ dependencies = [
 [[package]]
 name = "livesplit-core"
 version = "0.13.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#858ec1453a5f10b904942b156b1dd8eb6d1c8b7d"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#3b818e0cf729056880494338f4bae42423655326"
 dependencies = [
  "arc-swap",
  "base64-simd",
@@ -2301,7 +2301,7 @@ dependencies = [
 [[package]]
 name = "livesplit-hotkey"
 version = "0.7.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#858ec1453a5f10b904942b156b1dd8eb6d1c8b7d"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#3b818e0cf729056880494338f4bae42423655326"
 dependencies = [
  "bitflags 2.6.0",
  "cfg-if",
@@ -2341,7 +2341,7 @@ dependencies = [
 [[package]]
 name = "livesplit-title-abbreviations"
 version = "0.3.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#858ec1453a5f10b904942b156b1dd8eb6d1c8b7d"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#3b818e0cf729056880494338f4bae42423655326"
 
 [[package]]
 name = "log"
