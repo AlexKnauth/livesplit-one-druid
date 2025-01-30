@@ -484,26 +484,17 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             .unwrap()
                             .current_attempt_has_new_best_times()
                         {
-                            // TODO: fix this MessageDialog so that it doesn't cause
-                            // crashes on save while timer is running or ended (on Mac)
-                            #[cfg(not(target_os = "macos"))]
-                            {
-                                let result = native_dialog::MessageDialog::new()
-                                    .set_title("Update Times?")
-                                    .set_text("You have beaten some of your best times. Do you want to update them?")
-                                    .set_type(MessageType::Warning)
-                                    .show_confirm();
+                            let result = message_dialog_confirm(
+                                "Update Times?",
+                                "You have beaten some of your best times. Do you want to update them?",
+                            );
 
-                                if let Ok(wants_to_save_times) = result {
-                                    wants_to_save_times
-                                } else {
-                                    self.intent = Intent::NONE;
-                                    break;
-                                }
+                            if let Ok(wants_to_save_times) = result {
+                                wants_to_save_times
+                            } else {
+                                self.intent = Intent::NONE;
+                                break;
                             }
-                            // since the MessageDialog isn't working on Mac, assume Yes for now
-                            #[cfg(target_os = "macos")]
-                            true
                         } else {
                             true
                         };
@@ -513,27 +504,17 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     if self.intent.contains(Intent::MAYBE_SAVE_SPLITS) {
                         self.intent = self.intent.without(Intent::MAYBE_SAVE_SPLITS);
                         if data.timer.read().unwrap().run().has_been_modified() {
-                            // TODO: fix this MessageDialog so that it doesn't cause crashes on Mac
-                            #[cfg(not(target_os = "macos"))]
-                            {
-                                let result = native_dialog::MessageDialog::new()
-                                    .set_title("Save Splits?")
-                                    .set_text("Your splits have been updated but not yet saved. Do you want to save your splits now?")
-                                    .set_type(MessageType::Warning)
-                                    .show_confirm();
+                            let result = message_dialog_confirm(
+                                "Save Splits?",
+                                "Your splits have been updated but not yet saved. Do you want to save your splits now?",
+                            );
 
-                                if let Ok(wants_to_save) = result {
-                                    if wants_to_save {
-                                        self.intent = self.intent.with(Intent::SAVE_SPLITS);
-                                    }
-                                } else {
-                                    self.intent = Intent::NONE;
+                            if let Ok(wants_to_save) = result {
+                                if wants_to_save {
+                                    self.intent = self.intent.with(Intent::SAVE_SPLITS);
                                 }
-                            }
-                            // since the MessageDialog isn't working on Mac, assume Yes for now
-                            #[cfg(target_os = "macos")]
-                            {
-                                self.intent = self.intent.with(Intent::SAVE_SPLITS);
+                            } else {
+                                self.intent = Intent::NONE;
                             }
                         }
                     }
@@ -596,27 +577,17 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     if self.intent.contains(Intent::MAYBE_SAVE_LAYOUT) {
                         self.intent = self.intent.without(Intent::MAYBE_SAVE_LAYOUT);
                         if data.layout_data.borrow().is_modified {
-                            // TODO: fix this MessageDialog so that it doesn't cause crashes on Mac
-                            #[cfg(not(target_os = "macos"))]
-                            {
-                                let result = native_dialog::MessageDialog::new()
-                                    .set_title("Save Layout?")
-                                    .set_text("Your layout has been updated but not yet saved. Do you want to save your layout now?")
-                                    .set_type(MessageType::Warning)
-                                    .show_confirm();
+                            let result = message_dialog_confirm(
+                                "Save Layout?",
+                                "Your layout has been updated but not yet saved. Do you want to save your layout now?",
+                            );
 
-                                if let Ok(wants_to_save) = result {
-                                    if wants_to_save {
-                                        self.intent = self.intent.with(Intent::SAVE_LAYOUT);
-                                    }
-                                } else {
-                                    self.intent = Intent::NONE;
+                            if let Ok(wants_to_save) = result {
+                                if wants_to_save {
+                                    self.intent = self.intent.with(Intent::SAVE_LAYOUT);
                                 }
-                            }
-                            // since the MessageDialog isn't working on Mac, assume Yes for now
-                            #[cfg(target_os = "macos")]
-                            {
-                                self.intent = self.intent.with(Intent::SAVE_LAYOUT);
+                            } else {
+                                self.intent = Intent::NONE;
                             }
                         }
                     }
@@ -964,4 +935,17 @@ pub fn launch(state: MainState, window: WindowDesc<MainState>) {
         .delegate(WindowManagement)
         .launch(state)
         .unwrap();
+}
+
+fn message_dialog_confirm(title: &str, text: &str) -> native_dialog::Result<bool> {
+    // TODO: fix this MessageDialog so that it doesn't cause crashes on Mac
+    #[cfg(not(target_os = "macos"))]
+    return native_dialog::MessageDialog::new()
+        .set_title(title)
+        .set_text(text)
+        .set_type(MessageType::Warning)
+        .show_confirm();
+    // since the MessageDialog isn't working on Mac, assume Yes for now
+    #[cfg(target_os = "macos")]
+    return Ok(true);
 }
