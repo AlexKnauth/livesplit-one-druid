@@ -937,12 +937,12 @@ pub fn launch(state: MainState, window: WindowDesc<MainState>) {
         .unwrap();
 }
 
-fn message_dialog_confirm(title: &str, text: &str) -> native_dialog::Result<bool> {
+fn message_dialog_confirm(_title: &str, _text: &str) -> native_dialog::Result<bool> {
     // TODO: fix this MessageDialog so that it doesn't cause crashes on Mac
     #[cfg(not(target_os = "macos"))]
     return native_dialog::MessageDialog::new()
-        .set_title(title)
-        .set_text(text)
+        .set_title(_title)
+        .set_text(_text)
         .set_type(MessageType::Warning)
         .show_confirm();
     // since the MessageDialog isn't working on Mac, assume Yes for now
