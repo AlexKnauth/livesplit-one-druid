@@ -1,6 +1,6 @@
 [package]
 name = "livesplit-one"
-version = "0.4.4"
+version = "0.4.5"
 authors = ["Christopher Serr <christopher.serr@gmail.com>"]
 edition = "2021"
 build = "build.rs"
