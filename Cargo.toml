@@ -8,7 +8,7 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-druid = { git = "https://github.com/linebender/druid" }
+druid = { git = "https://github.com/AlexKnauth/druid", branch = "context_menu" }
 livesplit-core = { git = "https://github.com/AlexKnauth/livesplit-core", branch = "legacy_raw_xml", features = ["font-loading", "software-rendering"] }
 image = "0.25.5"
 log = { version = "0.4.22", features = ["serde"] }
