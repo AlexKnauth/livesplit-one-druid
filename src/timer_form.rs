@@ -358,16 +358,12 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     let result = data.config.borrow_mut().open_splits(
                         &data.timer,
                         &mut data.layout_data.borrow_mut(),
-                        #[cfg(feature = "auto-splitting")]
-                        &data.auto_splitter,
                         file_info.path().to_path_buf(),
                     );
                     or_show_error(result);
                 } else if let Some(file_info) = command.get(CONTEXT_MENU_SAVE_SPLITS_AS) {
                     let result = data.config.borrow_mut().save_splits_as(
                         &mut data.timer.write().unwrap(),
-                        #[cfg(feature = "auto-splitting")]
-                        &data.auto_splitter,
                         file_info.path().to_path_buf(),
                     );
                     or_show_error(result);
@@ -524,8 +520,6 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         if data.config.borrow().can_directly_save_splits() {
                             let result = data.config.borrow_mut().save_splits(
                                 &mut data.timer.write().unwrap(),
-                                #[cfg(feature = "auto-splitting")]
-                                &data.auto_splitter,
                             );
                             or_show_error(result);
                         } else {
@@ -671,7 +665,6 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
             }
             _ => {}
         }
-        self.set_mouse_pass_through_while_running(ctx, data);
         self.inner.event(ctx, event, data, env)
     }
 
@@ -755,25 +748,6 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
             ctx.window().set_size(Size::new(new_width, new_height));
         }
         data.image_cache.borrow_mut().collect();
-    }
-}
-
-impl<T: Widget<MainState>> WithMenu<T> {
-    fn set_mouse_pass_through_while_running(&mut self, ctx: &mut EventCtx, data: &mut MainState) {
-        let pass_while_running = data
-            .layout_data
-            .borrow()
-            .layout_state
-            .mouse_pass_through_while_running;
-        let timer = data.timer.read().unwrap();
-        let current_phase = timer.current_phase();
-        let mouse_pass_through = pass_while_running
-            && current_phase == TimerPhase::Running
-            && !ctx.window().is_foreground_window();
-        if data.mouse_pass_through != mouse_pass_through {
-            data.mouse_pass_through = mouse_pass_through;
-            ctx.window().set_mouse_pass_through(mouse_pass_through);
-        }
     }
 }
 
