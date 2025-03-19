@@ -9,7 +9,6 @@ use crate::{
 };
 use druid::{
     lens::Identity,
-    theme,
     widget::{Flex, Label, LineBreaking, List, ListIter, Stepper, Switch, TextBox, ViewSwitcher},
     BoxConstraints, Color, Data, Env, Event, EventCtx, Insets, LayoutCtx, Lens, LensExt, LifeCycle,
     LifeCycleCtx, PaintCtx, RenderContext, Size, TextAlignment, UpdateCtx, Widget, WidgetExt,
@@ -22,7 +21,7 @@ use livesplit_core::{
     layout::LayoutDirection,
     settings::{
         self, Alignment, ColumnKind, Font, FontStretch, FontStyle, FontWeight, Gradient,
-        ListGradient, Value,
+        LayoutBackground, ListGradient, Value,
     },
     timing::formatter::{Accuracy, DigitsFormat},
     TimingMethod,
@@ -110,7 +109,7 @@ pub fn widget<T: ListIter<SettingsRow>>() -> impl Widget<T> {
             Flex::row()
                 .with_spacer(6.0)
                 .with_child(
-                    Label::new(|data: &String, env: &_| data.to_owned())
+                    Label::new(|data: &String, _env: &_| data.to_owned())
                         .with_line_break_mode(LineBreaking::WordWrap)
                         .lens(SettingsRow::text)
                         .fix_width(225.0),
@@ -246,6 +245,7 @@ pub fn widget<T: ListIter<SettingsRow>>() -> impl Widget<T> {
                                     .expand_width()
                                     .center(),
                             ),
+                            Value::LayoutBackground(_) => Box::new(layout_background()),
                             Value::Color(_) => Box::new(color()),
                             Value::OptionalColor(_) => Box::new(optional_color()),
                             Value::Font(_) => Box::new(font()),
@@ -999,6 +999,28 @@ fn color() -> impl Widget<SettingsRow> {
     ))
 }
 
+fn layout_background() -> impl Widget<SettingsRow> {
+    color_editor().lens(Identity.map(
+        |row: &SettingsRow| {
+            ColorData(match &row.value {
+                Value::LayoutBackground(v) => color_from_layout_background(v),
+                Value::Color(v) => *v,
+                // TODO: What
+                _ => livesplit_core::settings::Color::transparent(),
+            })
+        },
+        |row: &mut SettingsRow, color: ColorData| match &mut row.value {
+            Value::LayoutBackground(v) => {
+                *v = LayoutBackground::Gradient(Gradient::Plain(color.0));
+            }
+            Value::Color(v) => {
+                *v = color.0;
+            }
+            _ => (),
+        },
+    ))
+}
+
 #[derive(Copy, Clone)]
 struct ColorData(livesplit_core::settings::Color);
 
@@ -1444,4 +1466,23 @@ fn optional_timing_method() -> impl Widget<SettingsRow> {
             ),
             1.0,
         )
+}
+
+fn color_from_layout_background(
+    lb: &LayoutBackground<settings::ImageId>,
+) -> livesplit_core::settings::Color {
+    match lb {
+        LayoutBackground::Gradient(g) => color_from_gradiant(g),
+        // TODO: What
+        _ => livesplit_core::settings::Color::transparent(),
+    }
+}
+
+fn color_from_gradiant(g: &Gradient) -> livesplit_core::settings::Color {
+    match g {
+        Gradient::Transparent => livesplit_core::settings::Color::transparent(),
+        Gradient::Plain(c) => *c,
+        Gradient::Horizontal(c, _) => *c,
+        Gradient::Vertical(c, _) => *c,
+    }
 }

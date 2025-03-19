@@ -108,6 +108,7 @@ jobs:
             os: macOS-latest
             features: auto-splitting
             cross: skip
+            install_target: true
 
           - label: macOS x86_64-v3
             target: x86_64-apple-darwin
@@ -116,15 +117,16 @@ jobs:
             os: macOS-latest
             features: auto-splitting
             cross: skip
+            install_target: true
 
     steps:
       - name: Checkout Commit
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: hecrj/setup-rust-action@v1
+        uses: hecrj/setup-rust-action@v2
         with:
-          rust-version: ${{ matrix.toolchain || 'stable' }}
+          rust-version: 'stable'
 
       - name: Install Target
         if: matrix.install_target != ''
@@ -157,12 +159,12 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           SKIP_CROSS: ${{ matrix.cross }}
-          IS_DEPLOY: ${{ startsWith(github.ref, 'refs/tags/') && (matrix.release_anyway != '' || !(startsWith(matrix.toolchain, 'nightly') || startsWith(matrix.toolchain, 'beta'))) }}
+          IS_DEPLOY: ${{ startsWith(github.ref, 'refs/tags/') }}
           FEATURES: ${{ matrix.features }}
           RUSTFLAGS: ${{ matrix.rust_flags }}
 
       - name: Prepare Release
-        if: startsWith(github.ref, 'refs/tags/') && matrix.release == ''
+        if: startsWith(github.ref, 'refs/tags/')
         run: bash .github/workflows/before_deploy.sh
         env:
           OS_NAME: ${{ matrix.os }}
@@ -170,9 +172,10 @@ jobs:
           RELEASE_TARGET: ${{ matrix.target_rename || matrix.target }}
 
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/') && matrix.release == ''
-        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
+          generate_release_notes: true
           files: livesplit-one-*.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -181,10 +184,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout Commit
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: hecrj/setup-rust-action@v1
+        uses: hecrj/setup-rust-action@v2
         with:
           components: clippy
 
@@ -195,10 +198,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Commit
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: hecrj/setup-rust-action@v1
+        uses: hecrj/setup-rust-action@v2
         with:
           components: rustfmt
 

@@ -1,37 +1,27 @@
-use std::{
-    fs::{self, File},
-    io::{BufReader, Cursor, Seek, SeekFrom},
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::Path, sync::Arc};
 
 use druid::{
     commands,
     menu::MenuEntry,
-    piet::{Device, ImageFormat, PietImage},
+    piet::PietImage,
     theme,
     widget::{Controller, Flex},
-    AppDelegate, AppLauncher, BoxConstraints, Command, DelegateCtx, Env, Event, EventCtx,
-    FileDialogOptions, FileInfo, FileSpec, LayoutCtx, LifeCycle, LifeCycleCtx, LocalizedString,
-    Menu, MenuItem, MouseButton, Point, RenderContext, Selector, Size, UpdateCtx, Widget,
-    WidgetExt, WindowDesc, WindowId, WindowLevel,
+    AppDelegate, AppLauncher, BoxConstraints, DelegateCtx, Env, Event, EventCtx, FileDialogOptions,
+    FileInfo, FileSpec, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, MenuItem, Point, Selector, Size,
+    UpdateCtx, Widget, WidgetExt, WindowDesc, WindowId, WindowLevel,
 };
-use livesplit_core::{
-    layout::{self, LayoutSettings},
-    run::parser::{composite, TimerKind},
-    Layout, LayoutEditor, RunEditor, TimerPhase, TimingMethod,
-};
+use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
+#[cfg(not(target_os = "macos"))]
 use native_dialog::MessageType;
-use once_cell::sync::OnceCell;
 
 use crate::{
-    config::{or_show_error, show_error},
+    config::or_show_error,
     consts::{
-        BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP, MARGIN,
-        PRIMARY_LIGHT, SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
+        BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP, PRIMARY_LIGHT,
+        SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
     },
     layout_editor, run_editor, settings_editor, software_renderer, LayoutEditorLens, MainState,
-    OpenWindow, RunEditorLens, SettingsEditorLens, FONT_FAMILIES, HOTKEY_SYSTEM,
+    OpenWindow, RunEditorLens, SettingsEditorLens, HOTKEY_SYSTEM,
 };
 
 struct WithMenu<T> {
@@ -85,6 +75,7 @@ impl Intent {
     const NEW_LAYOUT: Self = Self(1 << 9);
     const OPEN_LAYOUT: Self = Self(1 << 10);
     const EXIT: Self = Self(1 << 11);
+    const OPEN_AUTO_SPLITTER: Self = Self(1 << 12);
 
     fn contains(self, other: Self) -> bool {
         (self.0 & other.0) == other.0
@@ -110,6 +101,8 @@ const CONTEXT_MENU_EDIT_LAYOUT: Selector = Selector::new("context-menu-edit-layo
 const CONTEXT_MENU_OPEN_LAYOUT: Selector<FileInfo> = Selector::new("context-menu-open-layout");
 const CONTEXT_MENU_SAVE_LAYOUT_AS: Selector<FileInfo> =
     Selector::new("context-menu-save-layout-as");
+const CONTEXT_MENU_OPEN_AUTO_SPLITTER: Selector<FileInfo> =
+    Selector::new("context-menu-open-auto-splitter");
 const CONTEXT_MENU_START_OR_SPLIT: Selector = Selector::new("context-menu-start-or-split");
 const CONTEXT_MENU_UNDO_SPLIT: Selector = Selector::new("context-menu-undo-split");
 const CONTEXT_MENU_SKIP_SPLIT: Selector = Selector::new("context-menu-skip-split");
@@ -135,7 +128,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                 }
             }
             Event::MouseUp(event) => {
-                if event.button == MouseButton::Right
+                if (event.button.is_right() || (event.button.is_left() && event.mods.ctrl()))
                     && data.run_editor.is_none()
                     && data.layout_editor.is_none()
                     && data.settings_editor.is_none()
@@ -309,6 +302,11 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                         CONTEXT_MENU_SET_INTENT.with(Intent::SAVE_LAYOUT_AS),
                                     )),
                             )
+                            .entry(
+                                MenuItem::new("Open Auto-splitter...").command(
+                                    CONTEXT_MENU_SET_INTENT.with(Intent::OPEN_AUTO_SPLITTER),
+                                ),
+                            )
                             .separator()
                             .entry(control_menu)
                             .entry(compare_against)
@@ -331,7 +329,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
             }
             Event::Command(command) => {
                 if command.is(CONTEXT_MENU_EDIT_SPLITS) {
-                    HOTKEY_SYSTEM
+                    let _ = HOTKEY_SYSTEM
                         .write()
                         .unwrap()
                         .as_mut()
@@ -344,16 +342,21 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         .with_min_size((690.0, 495.0))
                         .window_size((690.0, 495.0))
                         // TODO: WindowLevel::Modal(ctx.window().clone())
-                        .set_level(WindowLevel::AppWindow);
+                        .set_level(WindowLevel::AppWindow)
+                        .set_always_on_top(true);
                     let window_id = window.id;
                     ctx.new_window(window);
                     data.run_editor = Some(OpenWindow {
                         id: window_id,
-                        state: run_editor::State::new(editor, data.config.clone()),
+                        state: run_editor::State::new(
+                            editor,
+                            data.config.clone(),
+                            data.image_cache.clone(),
+                        ),
                     });
                 } else if let Some(file_info) = command.get(CONTEXT_MENU_OPEN_SPLITS) {
                     let result = data.config.borrow_mut().open_splits(
-                        &mut data.timer.write().unwrap(),
+                        &data.timer,
                         &mut data.layout_data.borrow_mut(),
                         file_info.path().to_path_buf(),
                     );
@@ -365,7 +368,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     );
                     or_show_error(result);
                 } else if command.is(CONTEXT_MENU_EDIT_LAYOUT) {
-                    HOTKEY_SYSTEM
+                    let _ = HOTKEY_SYSTEM
                         .write()
                         .unwrap()
                         .as_mut()
@@ -379,12 +382,13 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             .with_min_size((500.0, 600.0))
                             .window_size((550.0, 650.0))
                             // TODO: WindowLevel::Modal(ctx.window().clone())
-                            .set_level(WindowLevel::AppWindow);
+                            .set_level(WindowLevel::AppWindow)
+                            .set_always_on_top(true);
                     let window_id = window.id;
                     ctx.new_window(window);
                     data.layout_editor = Some(OpenWindow {
                         id: window_id,
-                        state: layout_editor::State::new(editor),
+                        state: layout_editor::State::new(editor, data.image_cache.clone()),
                     });
                 } else if let Some(file_info) = command.get(CONTEXT_MENU_OPEN_LAYOUT) {
                     let result = data.config.borrow_mut().open_layout(
@@ -404,16 +408,25 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         data.layout_data.borrow_mut().is_modified = false;
                     }
                     or_show_error(result);
+                } else if let Some(file_info) = command.get(CONTEXT_MENU_OPEN_AUTO_SPLITTER) {
+                    let result = data.config.borrow_mut().open_auto_splitter(
+                        #[cfg(feature = "auto-splitting")]
+                        &data.timer,
+                        #[cfg(feature = "auto-splitting")]
+                        &data.auto_splitter,
+                        file_info.path(),
+                    );
+                    or_show_error(result);
                 } else if command.is(CONTEXT_MENU_START_OR_SPLIT) {
-                    data.timer.write().unwrap().split_or_start();
+                    data.timer.write().unwrap().split_or_start().ok();
                 } else if command.is(CONTEXT_MENU_UNDO_SPLIT) {
-                    data.timer.write().unwrap().undo_split();
+                    data.timer.write().unwrap().undo_split().ok();
                 } else if command.is(CONTEXT_MENU_SKIP_SPLIT) {
-                    data.timer.write().unwrap().skip_split();
+                    data.timer.write().unwrap().skip_split().ok();
                 } else if command.is(CONTEXT_MENU_TOGGLE_PAUSE) {
-                    data.timer.write().unwrap().toggle_pause();
+                    data.timer.write().unwrap().toggle_pause().ok();
                 } else if command.is(CONTEXT_MENU_UNDO_ALL_PAUSES) {
-                    data.timer.write().unwrap().undo_all_pauses();
+                    data.timer.write().unwrap().undo_all_pauses().ok();
                 } else if let Some(comparison) = command.get(CONTEXT_MENU_SET_COMPARISON) {
                     // The comparison should always exist.
                     let _ = data
@@ -429,7 +442,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         .set_current_timing_method(*timing_method);
                     data.config.borrow_mut().set_timing_method(*timing_method);
                 } else if command.is(CONTEXT_MENU_EDIT_SETTINGS) {
-                    HOTKEY_SYSTEM
+                    let _ = HOTKEY_SYSTEM
                         .write()
                         .unwrap()
                         .as_mut()
@@ -441,7 +454,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             .with_min_size((550.0, 400.0))
                             .window_size((550.0, 450.0))
                             // TODO: WindowLevel::Modal(ctx.window().clone())
-                            .set_level(WindowLevel::AppWindow);
+                            .set_level(WindowLevel::AppWindow)
+                            .set_always_on_top(true);
                     let window_id = window.id;
                     ctx.new_window(window);
                     let config = HOTKEY_SYSTEM.read().unwrap().as_ref().unwrap().config();
@@ -466,11 +480,10 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             .unwrap()
                             .current_attempt_has_new_best_times()
                         {
-                            let result = native_dialog::MessageDialog::new()
-                                .set_title("Update Times?")
-                                .set_text("You have beaten some of your best times. Do you want to update them?")
-                                .set_type(MessageType::Warning)
-                                .show_confirm();
+                            let result = message_dialog_confirm(
+                                "Update Times?",
+                                "You have beaten some of your best times. Do you want to update them?",
+                            );
 
                             if let Ok(wants_to_save_times) = result {
                                 wants_to_save_times
@@ -481,17 +494,16 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         } else {
                             true
                         };
-                        data.timer.write().unwrap().reset(wants_to_save_times);
+                        data.timer.write().unwrap().reset(wants_to_save_times).ok();
                     }
 
                     if self.intent.contains(Intent::MAYBE_SAVE_SPLITS) {
                         self.intent = self.intent.without(Intent::MAYBE_SAVE_SPLITS);
                         if data.timer.read().unwrap().run().has_been_modified() {
-                            let result = native_dialog::MessageDialog::new()
-                                .set_title("Save Splits?")
-                                .set_text("Your splits have been updated but not yet saved. Do you want to save your splits now?")
-                                .set_type(MessageType::Warning)
-                                .show_confirm();
+                            let result = message_dialog_confirm(
+                                "Save Splits?",
+                                "Your splits have been updated but not yet saved. Do you want to save your splits now?",
+                            );
 
                             if let Ok(wants_to_save) = result {
                                 if wants_to_save {
@@ -506,10 +518,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     if self.intent.contains(Intent::SAVE_SPLITS) {
                         self.intent = self.intent.without(Intent::SAVE_SPLITS);
                         if data.config.borrow().can_directly_save_splits() {
-                            let result = data
-                                .config
-                                .borrow_mut()
-                                .save_splits(&mut data.timer.write().unwrap());
+                            let result = data.config.borrow_mut().save_splits(
+                                &mut data.timer.write().unwrap(),
+                            );
                             or_show_error(result);
                         } else {
                             self.intent = self.intent.with(Intent::SAVE_SPLITS_AS);
@@ -560,11 +571,10 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     if self.intent.contains(Intent::MAYBE_SAVE_LAYOUT) {
                         self.intent = self.intent.without(Intent::MAYBE_SAVE_LAYOUT);
                         if data.layout_data.borrow().is_modified {
-                            let result = native_dialog::MessageDialog::new()
-                                .set_title("Save Layout?")
-                                .set_text("Your layout has been updated but not yet saved. Do you want to save your layout now?")
-                                .set_type(MessageType::Warning)
-                                .show_confirm();
+                            let result = message_dialog_confirm(
+                                "Save Layout?",
+                                "Your layout has been updated but not yet saved. Do you want to save your layout now?",
+                            );
 
                             if let Ok(wants_to_save) = result {
                                 if wants_to_save {
@@ -625,6 +635,27 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         break;
                     }
 
+                    if self.intent.contains(Intent::OPEN_AUTO_SPLITTER) {
+                        self.intent = self.intent.without(Intent::OPEN_AUTO_SPLITTER);
+                        let open_dialog = commands::SHOW_OPEN_PANEL.with(
+                            FileDialogOptions::new()
+                                .title("Open Auto-splitter")
+                                .allowed_types(vec![
+                                    FileSpec {
+                                        name: "WASM Auto-splitters",
+                                        extensions: &["wasm"],
+                                    },
+                                    FileSpec {
+                                        name: "All Files",
+                                        extensions: &["*.*"],
+                                    },
+                                ])
+                                .accept_command(CONTEXT_MENU_OPEN_AUTO_SPLITTER),
+                        );
+                        ctx.submit_command(open_dialog);
+                        break;
+                    }
+
                     if self.intent.contains(Intent::EXIT) {
                         self.intent = self.intent.without(Intent::EXIT);
                         ctx.submit_command(commands::QUIT_APP);
@@ -664,7 +695,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
         self.inner.layout(ctx, bc, data, env)
     }
 
-    fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &MainState, env: &Env) {
+    fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &MainState, _env: &Env) {
         let mut layout_data = data.layout_data.borrow_mut();
         let layout_data = &mut *layout_data;
 
@@ -677,11 +708,13 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                 .unwrap()
                 .update_layout_state(
                     &mut layout_data.layout_state,
+                    &mut data.image_cache.borrow_mut(),
                     &data.timer.read().unwrap().snapshot(),
                 );
         } else {
             layout_data.layout.update_state(
                 &mut layout_data.layout_state,
+                &mut data.image_cache.borrow_mut(),
                 &data.timer.read().unwrap().snapshot(),
             );
         }
@@ -702,6 +735,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
         //     &mut self.bottom_image,
         //     &mut self.device,
         //     layout_data.scene_manager.scene(),
+        //     &data.image_cache.borrow(),
         // );
 
         if let Some((new_width, new_height)) = software_renderer::render_scene(
@@ -709,10 +743,11 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
             &mut self.bottom_image,
             &mut self.renderer,
             &layout_data.layout_state,
+            &data.image_cache.borrow(),
         ) {
-            ctx.window()
-                .set_size(Size::new(new_width as _, new_height as _));
+            ctx.window().set_size(Size::new(new_width, new_height));
         }
+        data.image_cache.borrow_mut().collect();
     }
 }
 
@@ -798,8 +833,8 @@ impl AppDelegate<MainState> for WindowManagement {
         &mut self,
         id: WindowId,
         data: &mut MainState,
-        env: &Env,
-        ctx: &mut DelegateCtx,
+        _env: &Env,
+        _ctx: &mut DelegateCtx,
     ) {
         if let Some(window) = &data.run_editor {
             if id == window.id {
@@ -813,7 +848,7 @@ impl AppDelegate<MainState> for WindowManagement {
                         .unwrap();
                 }
                 data.run_editor = None;
-                HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
+                let _ = HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
                 return;
             }
         }
@@ -827,7 +862,7 @@ impl AppDelegate<MainState> for WindowManagement {
                     layout_data.is_modified = true;
                 }
                 data.layout_editor = None;
-                HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
+                let _ = HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
                 return;
             }
         }
@@ -836,7 +871,7 @@ impl AppDelegate<MainState> for WindowManagement {
             if id == window.id {
                 if window.state.closed_with_ok {
                     let hotkey_config = window.state.editor.borrow_mut().take().unwrap();
-                    HOTKEY_SYSTEM
+                    let _ = HOTKEY_SYSTEM
                         .write()
                         .unwrap()
                         .as_mut()
@@ -845,7 +880,7 @@ impl AppDelegate<MainState> for WindowManagement {
                     data.config.borrow_mut().set_hotkeys(hotkey_config);
                 }
                 data.settings_editor = None;
-                HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
+                let _ = HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
                 return;
             }
         }
@@ -874,4 +909,17 @@ pub fn launch(state: MainState, window: WindowDesc<MainState>) {
         .delegate(WindowManagement)
         .launch(state)
         .unwrap();
+}
+
+fn message_dialog_confirm(_title: &str, _text: &str) -> native_dialog::Result<bool> {
+    // TODO: fix this MessageDialog so that it doesn't cause crashes on Mac
+    #[cfg(not(target_os = "macos"))]
+    return native_dialog::MessageDialog::new()
+        .set_title(_title)
+        .set_text(_text)
+        .set_type(MessageType::Warning)
+        .show_confirm();
+    // since the MessageDialog isn't working on Mac, assume Yes for now
+    #[cfg(target_os = "macos")]
+    return Ok(true);
 }

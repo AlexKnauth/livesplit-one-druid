@@ -44,7 +44,7 @@ impl ListIter<SettingsRow> for State {
 
         for (index, field) in self.state.fields.iter().enumerate() {
             row.index = index;
-            row.text.clone_from(&field.text);
+            row.text.clone_from(&field.text.to_string());
             row.value.clone_from(&field.value);
             cb(&row, index);
         }
@@ -63,11 +63,11 @@ impl ListIter<SettingsRow> for State {
 
         for (index, field) in self.state.fields.iter().enumerate() {
             row.index = index;
-            row.text.clone_from(&field.text);
+            row.text.clone_from(&field.text.to_string());
             row.value.clone_from(&field.value);
             cb(&mut row, index);
             if row.value != field.value {
-                editor.set_value(index, row.value.clone());
+                let _ = editor.set_value(index, row.value.clone());
                 changed = true;
             }
         }

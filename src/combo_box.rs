@@ -12,9 +12,11 @@ struct CloseOnFocusLoss;
 
 impl<T, W: Widget<T>> Controller<T, W> for CloseOnFocusLoss {
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        /*
         if let Event::WindowLostFocus = event {
             ctx.submit_command(CLOSE_WINDOW);
         }
+        */
         child.event(ctx, event, data, env)
     }
 }
@@ -118,7 +120,7 @@ impl<W: Widget<String>> Widget<String> for Pod<W> {
         self.0.lifecycle(ctx, event, data, env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &String, data: &String, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, _old_data: &String, data: &String, env: &Env) {
         self.0.update(ctx, data, env)
     }
 
@@ -129,7 +131,9 @@ impl<W: Widget<String>> Widget<String> for Pod<W> {
         data: &String,
         env: &Env,
     ) -> Size {
-        self.0.layout(ctx, bc, data, env)
+        let size = self.0.layout(ctx, bc, data, env);
+        self.0.set_origin(ctx, Point::new(0.0, 0.0));
+        size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &String, env: &Env) {
@@ -267,7 +271,7 @@ fn drop_down(list: &impl ComboList) -> impl Widget<usize> {
             .center()
             .fix_height(25.0)
             .padding((5.0, 0.0))
-            .background(Painter::new(move |ctx, selected_index, env| {
+            .background(Painter::new(move |ctx, selected_index, _env| {
                 let shape = ctx.size().to_rect();
                 if ctx.is_hot() {
                     ctx.fill(shape, &Color::rgb8(30, 144, 255));
@@ -275,7 +279,7 @@ fn drop_down(list: &impl ComboList) -> impl Widget<usize> {
                     ctx.fill(shape, &Color::rgb8(0x1e, 0x44, 0x91));
                 }
             }))
-            .on_click(move |ctx, selected_index, env| {
+            .on_click(move |ctx, selected_index, _env| {
                 *selected_index = index;
                 ctx.submit_command(CLOSE_WINDOW);
             });

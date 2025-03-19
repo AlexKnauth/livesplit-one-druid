@@ -6,8 +6,11 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use clap::Parser;
 use druid::{Data, Lens, WindowId};
-use livesplit_core::{layout::LayoutState, HotkeySystem, Layout, SharedTimer, Timer};
+use livesplit_core::{
+    layout::LayoutState, settings::ImageCache, HotkeySystem, Layout, SharedTimer, Timer,
+};
 use mimalloc::MiMalloc;
 use once_cell::sync::Lazy;
 
@@ -16,6 +19,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 use crate::config::Config;
 
+mod cli;
 mod color_button;
 mod combo_box;
 mod config;
@@ -32,7 +36,7 @@ mod timer_form;
 mod software_renderer;
 // mod piet_renderer;
 
-static HOTKEY_SYSTEM: RwLock<Option<HotkeySystem>> = RwLock::new(None);
+static HOTKEY_SYSTEM: RwLock<Option<HotkeySystem<SharedTimer>>> = RwLock::new(None);
 static FONT_FAMILIES: Lazy<Arc<[Arc<str>]>> = Lazy::new(|| {
     let mut db = fontdb::Database::new();
     db.load_system_fonts();
@@ -56,12 +60,14 @@ pub struct MainState {
     layout_data: Rc<RefCell<LayoutData>>,
     #[data(ignore)]
     #[cfg(feature = "auto-splitting")]
-    auto_splitter: Rc<livesplit_core::auto_splitting::Runtime>,
+    auto_splitter: Rc<livesplit_core::auto_splitting::Runtime<SharedTimer>>,
     #[data(ignore)]
     config: Rc<RefCell<Config>>,
     run_editor: Option<OpenWindow<run_editor::State>>,
     layout_editor: Option<OpenWindow<layout_editor::State>>,
     settings_editor: Option<OpenWindow<settings_editor::State>>,
+    image_cache: Rc<RefCell<ImageCache>>,
+    mouse_pass_through: bool,
 }
 
 pub struct LayoutData {
@@ -93,14 +99,13 @@ impl MainState {
         let layout = config.parse_layout_or_default(&timer);
 
         let timer = timer.into_shared();
-        let mut hotkey_system = HotkeySystem::new(timer.clone()).unwrap();
-        config.configure_hotkeys(&mut hotkey_system);
+        let hotkey_system = config.configure_hotkeys(timer.clone());
         *HOTKEY_SYSTEM.write().unwrap() = Some(hotkey_system);
 
         #[cfg(feature = "auto-splitting")]
-        let auto_splitter = livesplit_core::auto_splitting::Runtime::new(timer.clone());
+        let auto_splitter = livesplit_core::auto_splitting::Runtime::new();
         #[cfg(feature = "auto-splitting")]
-        config.maybe_load_auto_splitter(&auto_splitter);
+        config.maybe_load_auto_splitter(&auto_splitter, timer.clone());
 
         Self {
             timer,
@@ -115,6 +120,8 @@ impl MainState {
             run_editor: None,
             layout_editor: None,
             settings_editor: None,
+            image_cache: Rc::new(RefCell::new(ImageCache::new())),
+            mouse_pass_through: false,
         }
     }
 }
@@ -164,7 +171,8 @@ impl Lens<MainState, settings_editor::State> for SettingsEditorLens {
 }
 
 fn main() {
-    let config = Config::load();
+    let cli = cli::Cli::parse();
+    let config = Config::load(cli);
     let window = config.build_window();
     timer_form::launch(MainState::new(config), window);
 }

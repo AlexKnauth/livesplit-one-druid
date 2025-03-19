@@ -1,18 +1,16 @@
-use std::{cell::RefCell, rc::Rc};
-
 use druid::{
-    kurbo::PathEl,
-    piet::{Device, ImageFormat, InterpolationMode, PaintBrush, PietImage},
-    Affine, Color, ImageBuf, LinearGradient, PaintCtx, Point, Rect, RenderContext, UnitPoint,
+    piet::{ImageFormat, InterpolationMode, PietImage},
+    PaintCtx, Point, Rect, RenderContext,
 };
-use livesplit_core::{layout::LayoutState, rendering::software::Renderer};
+use livesplit_core::{layout::LayoutState, rendering::software::Renderer, settings::ImageCache};
 
 pub fn render_scene(
     paint_ctx: &mut PaintCtx,
     bottom_image: &mut Option<PietImage>,
     renderer: &mut Renderer,
     state: &LayoutState,
-) -> Option<(f32, f32)> {
+    image_cache: &ImageCache,
+) -> Option<(f64, f64)> {
     let size = paint_ctx.size();
     let scale = paint_ctx.scale();
     let scaled_width = size.width * scale.x();
@@ -21,7 +19,8 @@ pub fn render_scene(
     let (width, height) = (scaled_width as u32, scaled_height as u32);
     let dimensions = renderer.image().dimensions();
 
-    let new_dims = renderer.render(state, [width, height]);
+    let new_scaled_dims = renderer.render(state, image_cache, [width, height]);
+    let new_dims = new_scaled_dims.map(|[w, h]| scale.px_to_dp_xy(w, h));
 
     let bottom_image = if bottom_image.is_none() || dimensions != (width, height) {
         bottom_image.insert(

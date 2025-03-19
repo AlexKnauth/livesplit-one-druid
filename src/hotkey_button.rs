@@ -2,7 +2,7 @@ use std::fmt;
 
 use druid::{
     theme,
-    widget::{Button, ClipBox, Controller, Flex, Label},
+    widget::{Button, Flex},
     BoxConstraints, Code, Color, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
     PaintCtx, Size, UpdateCtx, Widget, WidgetExt,
 };

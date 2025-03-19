@@ -1,20 +1,11 @@
-use std::{
-    borrow::Cow,
-    cell::{Cell, RefCell},
-    mem,
-    ops::Range,
-};
+use std::{borrow::Cow, mem, ops::Range};
 
 use druid::{
     piet::{self, PietTextLayoutBuilder, TextAttribute, TextLayoutBuilder},
     text::{self, EditableText, StringCursor},
-    widget::{Scope, ScopeTransfer},
-    Color, Command, Data, Env, Selector, Target, Widget, WidgetId, WidgetPod,
+    Color, Command, Data, Env, Point, Selector, Target, Widget, WidgetPod,
 };
-use livesplit_core::{
-    timing::formatter::{none_wrapper::EmptyWrapper, Accuracy, SegmentTime, TimeFormatter},
-    TimeSpan,
-};
+use livesplit_core::TimeSpan;
 
 #[derive(Clone)]
 pub struct ValidatedString {
@@ -433,7 +424,9 @@ impl<W: Widget<String>> Widget<String> for OnFocusLoss<W> {
         env: &druid::Env,
     ) -> druid::Size {
         let data = self.cached.get_or_insert_with(|| data.clone());
-        self.inner.layout(ctx, bc, data, env)
+        let size = self.inner.layout(ctx, bc, data, env);
+        self.inner.set_origin(ctx, Point::new(0.0, 0.0));
+        size
     }
 
     fn paint(&mut self, ctx: &mut druid::PaintCtx, data: &String, env: &druid::Env) {

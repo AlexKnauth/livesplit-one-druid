@@ -1,14 +1,15 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use druid::WindowDesc;
 use livesplit_core::{
+    event,
     layout::{self, Layout, LayoutSettings},
     run::{
         parser::{composite, TimerKind},
         saver::livesplit::save_timer,
         LinkedLayout,
     },
-    HotkeyConfig, HotkeySystem, Run, RunEditor, Segment, Timer, TimingMethod,
+    HotkeyConfig, HotkeySystem, Run, RunEditor, Segment, SharedTimer, Timer, TimingMethod,
 };
 use log::error;
 use once_cell::sync::Lazy;
@@ -21,7 +22,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{timer_form, LayoutData, MainState};
+use crate::{cli, timer_form, LayoutData, MainState};
 
 #[derive(Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -130,8 +131,50 @@ static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| {
 });
 
 impl Config {
-    pub fn load() -> Self {
-        Self::parse().unwrap_or_default()
+    pub fn load(cli: cli::Cli) -> Self {
+        let mut cfg = Self::parse().unwrap_or_default();
+        cfg.load_splits_path(cli.splits);
+        cfg.load_layout_path(cli.layout);
+        cfg.load_autosplitter_path(cli.autosplitter);
+        cfg.save_config();
+        cfg
+    }
+
+    /// Replace the current splits file with the given path during load, before the window is initialized
+    /// If the file path is invalid it keeps the split file specified in the config
+    fn load_splits_path(&mut self, split_file: Option<PathBuf>) {
+        if split_file.is_none() {
+            return;
+        };
+        let split_file = split_file.unwrap();
+        // This reads the file twice, once now and again below when splits are opened
+        let maybe_run = Config::parse_run_from_path(&split_file);
+        if maybe_run.is_none() {
+            return;
+        };
+        let (run, _) = maybe_run.unwrap();
+        self.splits.add_to_history(&run);
+        self.splits.current = Some(split_file);
+    }
+
+    fn load_layout_path(&mut self, layout_file: Option<PathBuf>) {
+        if layout_file.is_none() {
+            return;
+        };
+        let layout_file = layout_file.unwrap();
+        let maybe_layout = Self::parse_layout_with_path(&layout_file);
+        if maybe_layout.is_err() {
+            return;
+        }
+        self.general.can_save_layout = true;
+        self.general.layout = Some(layout_file);
+    }
+
+    fn load_autosplitter_path(&mut self, autosplitter_file: Option<PathBuf>) {
+        if autosplitter_file.is_none() {
+            return;
+        };
+        self.general.auto_splitter = autosplitter_file;
     }
 
     fn save_config(&self) -> Option<()> {
@@ -153,13 +196,17 @@ impl Config {
         &self.splits.history
     }
 
-    fn parse_run(&self) -> Option<(Run, bool)> {
-        let path = self.splits.current.clone()?;
+    fn parse_run_from_path(path: &Path) -> Option<(Run, bool)> {
         let file = fs::read(&path).ok()?;
         let parsed_run = composite::parse(&file, Some(&path)).ok()?;
         let run = parsed_run.run;
         let can_save = parsed_run.kind == TimerKind::LiveSplit;
         Some((run, can_save))
+    }
+
+    fn parse_run(&self) -> Option<(Run, bool)> {
+        let path = self.splits.current.clone()?;
+        Config::parse_run_from_path(&path)
     }
 
     pub fn parse_run_or_default(&mut self) -> Run {
@@ -221,9 +268,12 @@ impl Config {
             .unwrap_or_else(Layout::default_layout)
     }
 
-    // TODO: Just directly construct the HotkeySystem from the config.
-    pub fn configure_hotkeys(&self, hotkeys: &mut HotkeySystem) {
-        hotkeys.set_config(self.hotkeys).ok();
+    // Just directly construct the HotkeySystem from the config.
+    pub fn configure_hotkeys<E: event::CommandSink + Clone + Send + 'static>(
+        &self,
+        command_sink: E,
+    ) -> HotkeySystem<E> {
+        HotkeySystem::with_config(command_sink, self.hotkeys).unwrap()
     }
 
     pub fn configure_timer(&self, timer: &mut Timer) {
@@ -249,27 +299,30 @@ impl Config {
 
     pub fn open_splits(
         &mut self,
-        timer: &mut Timer,
+        shared_timer: &SharedTimer,
         layout_data: &mut LayoutData,
         path: PathBuf,
     ) -> Result<()> {
-        let file = fs::read(&path).context("Failed reading the file.")?;
-        let run = composite::parse(&file, Some(&path)).context("Failed parsing the file.")?;
-        timer.set_run(run.run).ok().context(
-            "The splits can't be used with the timer because they don't contain a single segment.",
-        )?;
+        {
+            let timer = &mut shared_timer.write().unwrap();
+            let file = fs::read(&path).context("Failed reading the file.")?;
+            let run = composite::parse(&file, Some(&path)).context("Failed parsing the file.")?;
+            timer.set_run(run.run).ok().context(
+                "The splits can't be used with the timer because they don't contain a single segment.",
+            )?;
 
-        self.splits.can_save = run.kind == TimerKind::LiveSplit;
-        self.splits.current = Some(path);
-        self.splits.add_to_history(timer.run());
+            self.splits.can_save = run.kind == TimerKind::LiveSplit;
+            self.splits.current = Some(path);
+            self.splits.add_to_history(timer.run());
 
-        self.save_config();
+            self.save_config();
 
-        if let Some(linked_layout) = timer.run().linked_layout() {
-            match linked_layout {
-                LinkedLayout::Default => self.new_layout(None, layout_data),
-                LinkedLayout::Path(path) => {
-                    let _ = self.open_layout(None, layout_data, Path::new(path));
+            if let Some(linked_layout) = timer.run().linked_layout() {
+                match linked_layout {
+                    LinkedLayout::Default => self.new_layout(None, layout_data),
+                    LinkedLayout::Path(path) => {
+                        let _ = self.open_layout(None, layout_data, Path::new(path));
+                    }
                 }
             }
         }
@@ -281,7 +334,10 @@ impl Config {
         self.splits.current.is_some() && self.splits.can_save
     }
 
-    pub fn save_splits(&mut self, timer: &mut Timer) -> Result<()> {
+    pub fn save_splits(
+        &mut self,
+        timer: &mut Timer,
+    ) -> Result<()> {
         if let Some(path) = &self.splits.current {
             let mut buf = String::new();
             save_timer(timer, &mut buf).context("Failed saving the splits.")?;
@@ -296,7 +352,11 @@ impl Config {
         Ok(())
     }
 
-    pub fn save_splits_as(&mut self, timer: &mut Timer, path: PathBuf) -> Result<()> {
+    pub fn save_splits_as(
+        &mut self,
+        timer: &mut Timer,
+        path: PathBuf,
+    ) -> Result<()> {
         let mut buf = String::new();
         save_timer(timer, &mut buf).context("Failed saving the splits.")?;
         fs::write(&path, &buf).context("Failed writing the file.")?;
@@ -391,6 +451,23 @@ impl Config {
         self.general.layout.is_some() && self.general.can_save_layout
     }
 
+    pub fn open_auto_splitter(
+        &mut self,
+        #[cfg(feature = "auto-splitting")] shared_timer: &SharedTimer,
+        #[cfg(feature = "auto-splitting")] runtime: &livesplit_core::auto_splitting::Runtime<
+            SharedTimer,
+        >,
+        path: &Path,
+    ) -> Result<()> {
+        self.general.auto_splitter = Some(path.into());
+        self.save_config();
+        #[cfg(feature = "auto-splitting")]
+        runtime.unload()?;
+        #[cfg(feature = "auto-splitting")]
+        runtime.load(path.into(), shared_timer.clone())?;
+        Ok(())
+    }
+
     pub fn set_comparison(&mut self, comparison: String) {
         self.general.comparison = Some(comparison);
         self.save_config();
@@ -446,13 +523,17 @@ impl Config {
             .window_size((self.window.width, self.window.height))
             .show_titlebar(false)
             .transparent(true)
-        // .topmost(true)
+            .set_always_on_top(true)
     }
 
     #[cfg(feature = "auto-splitting")]
-    pub fn maybe_load_auto_splitter(&self, runtime: &livesplit_core::auto_splitting::Runtime) {
+    pub fn maybe_load_auto_splitter(
+        &self,
+        runtime: &livesplit_core::auto_splitting::Runtime<SharedTimer>,
+        timer: SharedTimer,
+    ) {
         if let Some(auto_splitter) = &self.general.auto_splitter {
-            if let Err(e) = runtime.load_script_blocking(auto_splitter.clone()) {
+            if let Err(e) = runtime.load(auto_splitter.clone(), timer) {
                 // TODO: Error chain
                 log::error!("Auto Splitter failed to load: {}", e);
             }
@@ -467,6 +548,8 @@ fn default_run() -> Run {
 }
 
 pub fn show_error(error: anyhow::Error) {
+    // this MessageDialog is for displaying errors,
+    // so I guess it's fine if it crashes? if it was going to crash anyway?
     let _ = native_dialog::MessageDialog::new()
         .set_type(native_dialog::MessageType::Error)
         .set_title("Error")

@@ -1,5 +1,4 @@
 use druid::{
-    commands::CLOSE_WINDOW,
     kurbo::{Circle, Line, PathEl},
     lens::Unit,
     piet::{Image, ImageFormat, InterpolationMode, PietImage},
@@ -658,9 +657,11 @@ struct CloseOnFocusLoss;
 
 impl<T, W: Widget<T>> Controller<T, W> for CloseOnFocusLoss {
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
+        /*
         if let Event::WindowLostFocus = event {
             ctx.submit_command(CLOSE_WINDOW);
         }
+        */
         child.event(ctx, event, data, env)
     }
 
@@ -714,7 +715,9 @@ impl Widget<ColorState> for ColorButtonPod {
         data: &ColorState,
         env: &Env,
     ) -> Size {
-        self.0.layout(ctx, bc, data, env)
+        let size = self.0.layout(ctx, bc, data, env);
+        self.0.set_origin(ctx, Point::new(0.0, 0.0));
+        size
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &ColorState, env: &Env) {

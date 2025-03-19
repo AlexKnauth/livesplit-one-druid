@@ -1,38 +1,24 @@
-use std::{cell::RefCell, mem, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use druid::{
-    commands,
-    lens::Identity,
-    text::ParseFormatter,
-    theme,
-    widget::{
-        Button, CrossAxisAlignment, Flex, Label, LineBreaking, List, ListIter, Scroll, Slider,
-        Stepper, Switch, TextBox, ViewSwitcher,
-    },
-    BoxConstraints, Color, Data, Env, Event, EventCtx, Insets, LayoutCtx, Lens, LensExt, LifeCycle,
-    LifeCycleCtx, LinearGradient, LocalizedString, Menu, MenuItem, PaintCtx, RenderContext,
-    Selector, Size, TextAlignment, UnitPoint, UpdateCtx, Widget, WidgetExt,
+    commands, theme,
+    widget::{Button, CrossAxisAlignment, Flex, Label, List, ListIter, Scroll},
+    BoxConstraints, Color, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle, LifeCycleCtx,
+    LinearGradient, LocalizedString, Menu, MenuItem, PaintCtx, RenderContext, Selector, Size,
+    UnitPoint, UpdateCtx, Widget, WidgetExt,
 };
 use livesplit_core::{
-    component::{
-        self,
-        splits::{ColumnStartWith, ColumnUpdateTrigger, ColumnUpdateWith},
-    },
-    layout::{editor, LayoutDirection},
-    settings::{self, Alignment, ListGradient, Value},
-    timing::formatter::{Accuracy, DigitsFormat},
-    LayoutEditor, TimingMethod,
+    component,
+    layout::editor,
+    settings::{ImageCache, Value},
+    LayoutEditor,
 };
-use settings::{Font, FontStretch, FontStyle, FontWeight, Gradient};
 
 use crate::{
-    combo_box,
     consts::{
         BUTTON_ACTIVE_BOTTOM, BUTTON_ACTIVE_TOP, BUTTON_BORDER, BUTTON_HEIGHT, BUTTON_SPACING,
-        DIALOG_BUTTON_HEIGHT, DIALOG_BUTTON_WIDTH, GRID_BORDER, ICON_SIZE, MARGIN, SPACING,
-        TABLE_HORIZONTAL_MARGIN,
+        DIALOG_BUTTON_HEIGHT, DIALOG_BUTTON_WIDTH, MARGIN, SPACING,
     },
-    formatter_scope::formatted,
     settings_table::{self, SettingsRow},
     MainState,
 };
@@ -45,15 +31,18 @@ pub struct State {
     #[data(ignore)]
     pub closed_with_ok: bool,
     on_component_settings_tab: bool,
+    image_cache: Rc<RefCell<ImageCache>>,
 }
 
 impl State {
-    pub fn new(editor: LayoutEditor) -> Self {
+    pub fn new(editor: LayoutEditor, image_cache: Rc<RefCell<ImageCache>>) -> Self {
+        let state = Rc::new(editor.state(&mut image_cache.borrow_mut()));
         Self {
-            state: Rc::new(editor.state()),
+            state,
             editor: Rc::new(RefCell::new(Some(editor))),
             closed_with_ok: false,
             on_component_settings_tab: false,
+            image_cache,
         }
     }
 
@@ -61,7 +50,8 @@ impl State {
         let mut editor = self.editor.borrow_mut();
         let editor = editor.as_mut().unwrap();
         f(editor);
-        self.state = Rc::new(editor.state());
+        self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut()));
+        self.image_cache.borrow_mut().collect();
     }
 }
 
@@ -81,7 +71,7 @@ impl ListIter<SettingsRow> for State {
 
         for (index, field) in settings.fields.iter().enumerate() {
             row.index = index;
-            row.text.clone_from(&field.text);
+            row.text.clone_from(&field.text.to_string());
             row.value.clone_from(&field.value);
             cb(&row, index);
         }
@@ -106,22 +96,27 @@ impl ListIter<SettingsRow> for State {
 
         for (index, field) in settings.fields.iter().enumerate() {
             row.index = index;
-            row.text.clone_from(&field.text);
+            row.text.clone_from(&field.text.to_string());
             row.value.clone_from(&field.value);
             cb(&mut row, index);
             if row.value != field.value {
                 if self.on_component_settings_tab {
                     editor.set_component_settings_value(index, row.value.clone());
                 } else {
-                    editor.set_general_settings_value(index, row.value.clone());
+                    editor.set_general_settings_value(
+                        index,
+                        row.value.clone(),
+                        &self.image_cache.borrow(),
+                    );
                 }
                 changed = true;
             }
         }
 
         if changed {
-            self.state = Rc::new(editor.state());
+            self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut()));
         }
+        self.image_cache.borrow_mut().collect();
     }
 
     fn data_len(&self) -> usize {
@@ -173,8 +168,9 @@ impl ListIter<ComponentRow> for State {
         }
 
         if changed {
-            self.state = Rc::new(editor.state());
+            self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut()));
         }
+        self.image_cache.borrow_mut().collect();
     }
 
     fn data_len(&self) -> usize {
@@ -479,7 +475,7 @@ fn side_buttons() -> impl Widget<State> {
 fn components_list() -> impl Widget<State> {
     List::new(|| {
         ComponentRowWidget::new(
-            Label::new(|data: &String, env: &_| data.to_owned())
+            Label::new(|data: &String, _env: &_| data.to_owned())
                 .lens(ComponentRow::name)
                 .padding(2.0)
                 .expand_width(),
