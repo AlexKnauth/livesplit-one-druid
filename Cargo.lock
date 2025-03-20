@@ -357,9 +357,9 @@ dependencies = [
 
 [[package]]
 name = "bytemuck_derive"
-version = "1.9.1"
+version = "1.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d35fadd3de6c82a550b136427123552b401efdab9859130f1cf485fbdea40af"
+checksum = "2ff22c2722516255d1823ce3cc4bc0b154dbc9364be5c905d6baa6eccbbc8774"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2268,7 +2268,7 @@ checksum = "23fb14cb19457329c82206317a5663005a4d404783dc74f4252769b0d5f42856"
 [[package]]
 name = "livesplit-auto-splitting"
 version = "0.1.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#ad210fedb7afcad9e946717dbd885613a23489f3"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#888c1b2acd436c981b793ac20ed74abb7bf99ec2"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -2291,7 +2291,7 @@ dependencies = [
 [[package]]
 name = "livesplit-core"
 version = "0.13.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#ad210fedb7afcad9e946717dbd885613a23489f3"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#888c1b2acd436c981b793ac20ed74abb7bf99ec2"
 dependencies = [
  "arc-swap",
  "base64-simd",
@@ -2327,7 +2327,7 @@ dependencies = [
 [[package]]
 name = "livesplit-hotkey"
 version = "0.8.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#ad210fedb7afcad9e946717dbd885613a23489f3"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#888c1b2acd436c981b793ac20ed74abb7bf99ec2"
 dependencies = [
  "bitflags 2.9.0",
  "cfg-if",
@@ -2367,7 +2367,7 @@ dependencies = [
 [[package]]
 name = "livesplit-title-abbreviations"
 version = "0.3.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#ad210fedb7afcad9e946717dbd885613a23489f3"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#888c1b2acd436c981b793ac20ed74abb7bf99ec2"
 
 [[package]]
 name = "log"
