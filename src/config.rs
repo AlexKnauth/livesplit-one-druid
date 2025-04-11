@@ -268,6 +268,12 @@ impl Config {
             .unwrap_or_else(Layout::default_layout)
     }
 
+    pub fn set_window_size(&mut self, (width, height): (f64, f64)) {
+        self.window.width = width;
+        self.window.height = height;
+        self.save_config();
+    }
+
     // Just directly construct the HotkeySystem from the config.
     pub fn configure_hotkeys<E: event::CommandSink + Clone + Send + 'static>(
         &self,
