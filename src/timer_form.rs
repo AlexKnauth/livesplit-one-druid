@@ -666,7 +666,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         self.intent = self.intent.without(Intent::EXIT);
                         // TODO: ctx.size() vs ctx.window().get_size()
                         data.config.borrow_mut().set_window_size(ctx.size().into());
-                        // TODO: something something ctx.window().get_position() something?
+                        data.config.borrow_mut().set_window_position(ctx.window().get_position().into());
                         ctx.submit_command(commands::QUIT_APP);
                         break;
                     }
