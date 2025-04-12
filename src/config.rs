@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
-use druid::WindowDesc;
+use druid::{Screen, WindowDesc};
 use livesplit_core::{
     event,
     layout::{self, Layout, LayoutSettings},
@@ -556,13 +556,13 @@ impl Config {
             .show_titlebar(false)
             .transparent(true)
             .set_always_on_top(true);
-        if let (Some(x), Some(y)) = (self.window.x, self.window.y) {
-            // TODO: validate with Screen::get_display_rect() here?
-            // or Screen::get_monitors() with moniter.virtual_work_rect()?
-            w.set_position((x, y))
-        } else {
-            w
-        }
+        let (Some(x), Some(y)) = (self.window.x, self.window.y) else {
+            return w;
+        };
+        let Some(p) = validate_position((x, y)) else {
+            return w;
+        };
+        w.set_position(p)
     }
 
     #[cfg(feature = "auto-splitting")]
@@ -600,4 +600,17 @@ pub fn or_show_error(result: Result<()>) {
     if let Err(e) = result {
         show_error(e);
     }
+}
+
+fn validate_position(position: impl Into<druid::Point>) -> Option<druid::Point> {
+    let p = position.into();
+    if !Screen::get_display_rect().contains(p) {
+        return None;
+    }
+    for m in Screen::get_monitors() {
+        if m.virtual_work_rect().contains(p) {
+            return Some(p);
+        }
+    }
+    None
 }
