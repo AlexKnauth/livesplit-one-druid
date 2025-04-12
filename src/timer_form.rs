@@ -665,8 +665,12 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     if self.intent.contains(Intent::EXIT) {
                         self.intent = self.intent.without(Intent::EXIT);
                         let w = ctx.window();
-                        data.config.borrow_mut().set_window_size(w.get_size().into());
-                        data.config.borrow_mut().set_window_position(w.get_position().into());
+                        data.config
+                            .borrow_mut()
+                            .set_window_size(w.get_size().into());
+                        data.config
+                            .borrow_mut()
+                            .set_window_position(w.get_position().into());
                         ctx.submit_command(commands::QUIT_APP);
                         break;
                     }
