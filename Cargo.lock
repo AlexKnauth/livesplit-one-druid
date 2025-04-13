@@ -260,7 +260,7 @@ dependencies = [
  "bitflags 2.9.0",
  "cexpr",
  "clang-sys",
- "itertools 0.13.0",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "regex",
@@ -2103,15 +2103,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2207,7 +2198,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -2268,7 +2259,7 @@ checksum = "23fb14cb19457329c82206317a5663005a4d404783dc74f4252769b0d5f42856"
 [[package]]
 name = "livesplit-auto-splitting"
 version = "0.1.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#888c1b2acd436c981b793ac20ed74abb7bf99ec2"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#e8c028c7e2f6127f5f2791f89da7f0549117f5d9"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -2291,7 +2282,7 @@ dependencies = [
 [[package]]
 name = "livesplit-core"
 version = "0.13.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#888c1b2acd436c981b793ac20ed74abb7bf99ec2"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#e8c028c7e2f6127f5f2791f89da7f0549117f5d9"
 dependencies = [
  "arc-swap",
  "base64-simd",
@@ -2327,7 +2318,7 @@ dependencies = [
 [[package]]
 name = "livesplit-hotkey"
 version = "0.8.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#888c1b2acd436c981b793ac20ed74abb7bf99ec2"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#e8c028c7e2f6127f5f2791f89da7f0549117f5d9"
 dependencies = [
  "bitflags 2.9.0",
  "cfg-if",
@@ -2367,7 +2358,7 @@ dependencies = [
 [[package]]
 name = "livesplit-title-abbreviations"
 version = "0.3.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#888c1b2acd436c981b793ac20ed74abb7bf99ec2"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#e8c028c7e2f6127f5f2791f89da7f0549117f5d9"
 
 [[package]]
 name = "log"
@@ -3575,7 +3566,7 @@ version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03c3c6b7927ffe7ecaa769ee0e3994da3b8cafc8f444578982c83ecb161af917"
 dependencies = [
- "heck 0.5.0",
+ "heck 0.4.1",
  "proc-macro2",
  "quote",
  "syn 2.0.100",
@@ -4685,7 +4676,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
