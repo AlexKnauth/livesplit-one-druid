@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
-use druid::WindowDesc;
+use druid::{Screen, WindowDesc};
 use livesplit_core::{
     event,
     layout::{self, Layout, LayoutSettings},
@@ -113,6 +113,8 @@ struct Log {
 struct Window {
     width: f64,
     height: f64,
+    x: Option<f64>,
+    y: Option<f64>,
 }
 
 impl Default for Window {
@@ -120,6 +122,8 @@ impl Default for Window {
         Self {
             width: 300.0,
             height: 500.0,
+            x: None,
+            y: None,
         }
     }
 }
@@ -266,6 +270,18 @@ impl Config {
     pub fn parse_layout_or_default(&mut self, timer: &Timer) -> Layout {
         self.parse_layout(timer)
             .unwrap_or_else(Layout::default_layout)
+    }
+
+    pub fn set_window_size(&mut self, (width, height): (f64, f64)) {
+        self.window.width = width;
+        self.window.height = height;
+        self.save_config();
+    }
+
+    pub fn set_window_position(&mut self, (x, y): (f64, f64)) {
+        self.window.x = Some(x);
+        self.window.y = Some(y);
+        self.save_config();
     }
 
     // Just directly construct the HotkeySystem from the config.
@@ -533,13 +549,20 @@ impl Config {
     }
 
     pub fn build_window(&self) -> WindowDesc<MainState> {
-        WindowDesc::new(timer_form::root_widget())
+        let w = WindowDesc::new(timer_form::root_widget())
             .title("LiveSplit One")
             .with_min_size((50.0, 50.0))
             .window_size((self.window.width, self.window.height))
             .show_titlebar(false)
             .transparent(true)
-            .set_always_on_top(true)
+            .set_always_on_top(true);
+        let (Some(x), Some(y)) = (self.window.x, self.window.y) else {
+            return w;
+        };
+        let Some(p) = validate_position((x, y)) else {
+            return w;
+        };
+        w.set_position(p)
     }
 
     #[cfg(feature = "auto-splitting")]
@@ -577,4 +600,17 @@ pub fn or_show_error(result: Result<()>) {
     if let Err(e) = result {
         show_error(e);
     }
+}
+
+fn validate_position(position: impl Into<druid::Point>) -> Option<druid::Point> {
+    let p = position.into();
+    if !Screen::get_display_rect().contains(p) {
+        return None;
+    }
+    for m in Screen::get_monitors() {
+        if m.virtual_work_rect().contains(p) {
+            return Some(p);
+        }
+    }
+    None
 }
