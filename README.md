@@ -44,5 +44,16 @@ The config file and log file are located in the local data directory from [data_
 - Mac: `/Users/<name>/Library/Application Support/org.LiveSplit.LiveSplit-One/config.yml`
 - Linux: `/home/<name>/.local/share/livesplitone/config.yml` or `/root/.local/share/livesplitone/config.yml` if running as `sudo`
 
+If you want a log file, edit the `log` section of the config file to say
+
+```yaml
+log:
+  enable: true
+  level: INFO
+  clear: true
+```
+
+ Once you run it with an autosplitter open, a `log.txt` file should appear in the same directory as the config.
+
   [data_local_dir]: https://docs.rs/directories/latest/directories/struct.ProjectDirs.html#method.data_local_dir
   [livesplit-core]: https://github.com/LiveSplit/livesplit-core
