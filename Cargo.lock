@@ -260,7 +260,7 @@ dependencies = [
  "bitflags 2.9.0",
  "cexpr",
  "clang-sys",
- "itertools 0.11.0",
+ "itertools 0.12.1",
  "proc-macro2",
  "quote",
  "regex",
@@ -2220,7 +2220,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -2281,7 +2281,7 @@ checksum = "23fb14cb19457329c82206317a5663005a4d404783dc74f4252769b0d5f42856"
 [[package]]
 name = "livesplit-auto-splitting"
 version = "0.1.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#7fc0b33a1900f5717939efcf7a8643d6efa001c3"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#b4d044895a46d3529b8926c0a5ebfdbf683c24ac"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -2304,7 +2304,7 @@ dependencies = [
 [[package]]
 name = "livesplit-core"
 version = "0.13.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#7fc0b33a1900f5717939efcf7a8643d6efa001c3"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#b4d044895a46d3529b8926c0a5ebfdbf683c24ac"
 dependencies = [
  "arc-swap",
  "base64-simd",
@@ -2340,7 +2340,7 @@ dependencies = [
 [[package]]
 name = "livesplit-hotkey"
 version = "0.8.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#7fc0b33a1900f5717939efcf7a8643d6efa001c3"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#b4d044895a46d3529b8926c0a5ebfdbf683c24ac"
 dependencies = [
  "bitflags 2.9.0",
  "cfg-if",
@@ -2380,7 +2380,7 @@ dependencies = [
 [[package]]
 name = "livesplit-title-abbreviations"
 version = "0.3.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#7fc0b33a1900f5717939efcf7a8643d6efa001c3"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=legacy_raw_xml#b4d044895a46d3529b8926c0a5ebfdbf683c24ac"
 
 [[package]]
 name = "log"
@@ -3589,7 +3589,7 @@ version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03c3c6b7927ffe7ecaa769ee0e3994da3b8cafc8f444578982c83ecb161af917"
 dependencies = [
- "heck 0.4.1",
+ "heck 0.5.0",
  "proc-macro2",
  "quote",
  "syn 2.0.100",
@@ -4737,7 +4737,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
