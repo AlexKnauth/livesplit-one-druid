@@ -26,10 +26,10 @@ mod config;
 mod consts;
 mod formatter_scope;
 mod hotkey_button;
+mod hotkeys_editor;
 mod layout_editor;
 mod map_scope;
 mod run_editor;
-mod hotkeys_editor;
 mod settings_table;
 mod timer_form;
 

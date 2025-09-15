@@ -20,8 +20,8 @@ use crate::{
         BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP, PRIMARY_LIGHT,
         SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
     },
-    layout_editor, run_editor, hotkeys_editor, software_renderer, LayoutEditorLens, MainState,
-    OpenWindow, RunEditorLens, HotkeysEditorLens, HOTKEY_SYSTEM,
+    hotkeys_editor, layout_editor, run_editor, software_renderer, HotkeysEditorLens,
+    LayoutEditorLens, MainState, OpenWindow, RunEditorLens, HOTKEY_SYSTEM,
 };
 
 struct WithMenu<T> {
