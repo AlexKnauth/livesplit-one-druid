@@ -20,8 +20,8 @@ use crate::{
         BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP, PRIMARY_LIGHT,
         SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
     },
-    layout_editor, run_editor, settings_editor, software_renderer, LayoutEditorLens, MainState,
-    OpenWindow, RunEditorLens, SettingsEditorLens, HOTKEY_SYSTEM,
+    layout_editor, run_editor, hotkeys_editor, software_renderer, LayoutEditorLens, MainState,
+    OpenWindow, RunEditorLens, HotkeysEditorLens, HOTKEY_SYSTEM,
 };
 
 struct WithMenu<T> {
@@ -111,7 +111,7 @@ const CONTEXT_MENU_UNDO_ALL_PAUSES: Selector = Selector::new("context-menu-undo-
 const CONTEXT_MENU_SET_COMPARISON: Selector<String> = Selector::new("context-menu-set-comparison");
 const CONTEXT_MENU_SET_TIMING_METHOD: Selector<TimingMethod> =
     Selector::new("context-menu-set-timing-method");
-const CONTEXT_MENU_EDIT_SETTINGS: Selector = Selector::new("context-menu-edit-settings");
+const CONTEXT_MENU_EDIT_HOTKEYS: Selector = Selector::new("context-menu-edit-hotkeys");
 
 impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut MainState, env: &Env) {
@@ -131,7 +131,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                 if (event.button.is_right() || (event.button.is_left() && event.mods.ctrl()))
                     && data.run_editor.is_none()
                     && data.layout_editor.is_none()
-                    && data.settings_editor.is_none()
+                    && data.hotkeys_editor.is_none()
                 {
                     let mut compare_against = Menu::new("Compare Against");
 
@@ -311,7 +311,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             .entry(control_menu)
                             .entry(compare_against)
                             .separator()
-                            .entry(MenuItem::new("Settings").command(CONTEXT_MENU_EDIT_SETTINGS))
+                            .entry(MenuItem::new("Hotkeys").command(CONTEXT_MENU_EDIT_HOTKEYS))
                             .separator()
                             .entry(
                                 MenuItem::new("Exit").command(
@@ -445,7 +445,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         .unwrap()
                         .set_current_timing_method(*timing_method);
                     data.config.borrow_mut().set_timing_method(*timing_method);
-                } else if command.is(CONTEXT_MENU_EDIT_SETTINGS) {
+                } else if command.is(CONTEXT_MENU_EDIT_HOTKEYS) {
                     let _ = HOTKEY_SYSTEM
                         .write()
                         .unwrap()
@@ -453,7 +453,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         .unwrap()
                         .deactivate();
                     let window =
-                        WindowDesc::new(settings_editor::root_widget().lens(SettingsEditorLens))
+                        WindowDesc::new(hotkeys_editor::root_widget().lens(HotkeysEditorLens))
                             .title("Settings")
                             .with_min_size((550.0, 400.0))
                             .window_size((550.0, 450.0))
@@ -463,9 +463,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     let window_id = window.id;
                     ctx.new_window(window);
                     let config = HOTKEY_SYSTEM.read().unwrap().as_ref().unwrap().config();
-                    data.settings_editor = Some(OpenWindow {
+                    data.hotkeys_editor = Some(OpenWindow {
                         id: window_id,
-                        state: settings_editor::State::new(config),
+                        state: hotkeys_editor::State::new(config),
                     });
                 } else if let Some(intent) = command.get(CONTEXT_MENU_SET_INTENT) {
                     self.intent = *intent;
@@ -900,7 +900,7 @@ impl AppDelegate<MainState> for WindowManagement {
             }
         }
 
-        if let Some(window) = &data.settings_editor {
+        if let Some(window) = &data.hotkeys_editor {
             if id == window.id {
                 if window.state.closed_with_ok {
                     let hotkey_config = window.state.editor.borrow_mut().take().unwrap();
@@ -912,7 +912,7 @@ impl AppDelegate<MainState> for WindowManagement {
                         .set_config(hotkey_config);
                     data.config.borrow_mut().set_hotkeys(hotkey_config);
                 }
-                data.settings_editor = None;
+                data.hotkeys_editor = None;
                 let _ = HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
                 return;
             }
