@@ -20,8 +20,10 @@ use crate::{
         BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP, PRIMARY_LIGHT,
         SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
     },
-    hotkeys_editor, layout_editor, run_editor, software_renderer, HotkeysEditorLens,
-    LayoutEditorLens, MainState, OpenWindow, RunEditorLens, HOTKEY_SYSTEM,
+    hotkeys_editor, layout_editor, run_editor, software_renderer,
+    window_settings_editor::{self, WindowSettings},
+    HotkeysEditorLens, LayoutEditorLens, MainState, OpenWindow, RunEditorLens,
+    WindowSettingsEditorLens, HOTKEY_SYSTEM,
 };
 
 struct WithMenu<T> {
@@ -111,6 +113,8 @@ const CONTEXT_MENU_UNDO_ALL_PAUSES: Selector = Selector::new("context-menu-undo-
 const CONTEXT_MENU_SET_COMPARISON: Selector<String> = Selector::new("context-menu-set-comparison");
 const CONTEXT_MENU_SET_TIMING_METHOD: Selector<TimingMethod> =
     Selector::new("context-menu-set-timing-method");
+const CONTEXT_MENU_EDIT_WINDOW_SETTINGS: Selector =
+    Selector::new("context-menu-edit-window-settings");
 const CONTEXT_MENU_EDIT_HOTKEYS: Selector = Selector::new("context-menu-edit-hotkeys");
 
 impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
@@ -131,6 +135,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                 if (event.button.is_right() || (event.button.is_left() && event.mods.ctrl()))
                     && data.run_editor.is_none()
                     && data.layout_editor.is_none()
+                    && data.window_settings_editor.is_none()
                     && data.hotkeys_editor.is_none()
                 {
                     let mut compare_against = Menu::new("Compare Against");
@@ -311,6 +316,10 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             .entry(control_menu)
                             .entry(compare_against)
                             .separator()
+                            .entry(
+                                MenuItem::new("Window Settings")
+                                    .command(CONTEXT_MENU_EDIT_WINDOW_SETTINGS),
+                            )
                             .entry(MenuItem::new("Hotkeys").command(CONTEXT_MENU_EDIT_HOTKEYS))
                             .separator()
                             .entry(
@@ -445,6 +454,28 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         .unwrap()
                         .set_current_timing_method(*timing_method);
                     data.config.borrow_mut().set_timing_method(*timing_method);
+                } else if command.is(CONTEXT_MENU_EDIT_WINDOW_SETTINGS) {
+                    let window = WindowDesc::new(
+                        window_settings_editor::root_widget().lens(WindowSettingsEditorLens),
+                    )
+                    .title("Window Settings")
+                    .with_min_size((400.0, 200.0))
+                    .window_size((400.0, 200.0))
+                    // TODO: WindowLevel::Modal(ctx.window().clone())
+                    .set_level(WindowLevel::AppWindow)
+                    .set_always_on_top(true);
+                    let window_id = window.id;
+                    ctx.new_window(window);
+                    let window_settings = WindowSettings {
+                        mouse_pass_through_while_running: data
+                            .config
+                            .borrow()
+                            .get_mouse_pass_through_while_running(),
+                    };
+                    data.window_settings_editor = Some(OpenWindow {
+                        id: window_id,
+                        state: window_settings_editor::State::new(window_settings),
+                    });
                 } else if command.is(CONTEXT_MENU_EDIT_HOTKEYS) {
                     let _ = HOTKEY_SYSTEM
                         .write()
@@ -910,6 +941,21 @@ impl AppDelegate<MainState> for WindowManagement {
                 }
                 data.hotkeys_editor = None;
                 let _ = HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
+                return;
+            }
+        }
+
+        if let Some(window) = &data.window_settings_editor {
+            if id == window.id {
+                if window.state.closed_with_ok {
+                    let WindowSettings {
+                        mouse_pass_through_while_running,
+                    } = window.state.editor.borrow_mut().take().unwrap();
+                    data.config
+                        .borrow_mut()
+                        .set_mouse_pass_through_while_running(mouse_pass_through_while_running);
+                }
+                data.window_settings_editor = None;
                 return;
             }
         }

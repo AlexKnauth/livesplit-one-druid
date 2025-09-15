@@ -291,6 +291,10 @@ impl Config {
         self.window.mouse_pass_through_while_running
     }
 
+    pub fn set_mouse_pass_through_while_running(&mut self, b: bool) {
+        self.window.mouse_pass_through_while_running = b;
+    }
+
     // Just directly construct the HotkeySystem from the config.
     pub fn configure_hotkeys<E: event::CommandSink + Clone + Send + 'static>(
         &self,
