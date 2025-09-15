@@ -26,12 +26,13 @@ mod config;
 mod consts;
 mod formatter_scope;
 mod hotkey_button;
+mod hotkeys_editor;
 mod layout_editor;
 mod map_scope;
 mod run_editor;
-mod settings_editor;
 mod settings_table;
 mod timer_form;
+mod window_settings_editor;
 
 mod software_renderer;
 // mod piet_renderer;
@@ -65,7 +66,8 @@ pub struct MainState {
     config: Rc<RefCell<Config>>,
     run_editor: Option<OpenWindow<run_editor::State>>,
     layout_editor: Option<OpenWindow<layout_editor::State>>,
-    settings_editor: Option<OpenWindow<settings_editor::State>>,
+    window_settings_editor: Option<OpenWindow<window_settings_editor::State>>,
+    hotkeys_editor: Option<OpenWindow<hotkeys_editor::State>>,
     image_cache: Rc<RefCell<ImageCache>>,
     mouse_pass_through: bool,
 }
@@ -119,7 +121,8 @@ impl MainState {
             config: Rc::new(RefCell::new(config)),
             run_editor: None,
             layout_editor: None,
-            settings_editor: None,
+            window_settings_editor: None,
+            hotkeys_editor: None,
             image_cache: Rc::new(RefCell::new(ImageCache::new())),
             mouse_pass_through: false,
         }
@@ -154,19 +157,35 @@ impl Lens<MainState, layout_editor::State> for LayoutEditorLens {
     }
 }
 
-struct SettingsEditorLens;
+struct WindowSettingsEditorLens;
 
-impl Lens<MainState, settings_editor::State> for SettingsEditorLens {
-    fn with<V, F: FnOnce(&settings_editor::State) -> V>(&self, data: &MainState, f: F) -> V {
-        f(&data.settings_editor.as_ref().unwrap().state)
+impl Lens<MainState, window_settings_editor::State> for WindowSettingsEditorLens {
+    fn with<V, F: FnOnce(&window_settings_editor::State) -> V>(&self, data: &MainState, f: F) -> V {
+        f(&data.window_settings_editor.as_ref().unwrap().state)
     }
 
-    fn with_mut<V, F: FnOnce(&mut settings_editor::State) -> V>(
+    fn with_mut<V, F: FnOnce(&mut window_settings_editor::State) -> V>(
         &self,
         data: &mut MainState,
         f: F,
     ) -> V {
-        f(&mut data.settings_editor.as_mut().unwrap().state)
+        f(&mut data.window_settings_editor.as_mut().unwrap().state)
+    }
+}
+
+struct HotkeysEditorLens;
+
+impl Lens<MainState, hotkeys_editor::State> for HotkeysEditorLens {
+    fn with<V, F: FnOnce(&hotkeys_editor::State) -> V>(&self, data: &MainState, f: F) -> V {
+        f(&data.hotkeys_editor.as_ref().unwrap().state)
+    }
+
+    fn with_mut<V, F: FnOnce(&mut hotkeys_editor::State) -> V>(
+        &self,
+        data: &mut MainState,
+        f: F,
+    ) -> V {
+        f(&mut data.hotkeys_editor.as_mut().unwrap().state)
     }
 }
 

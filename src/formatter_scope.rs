@@ -36,7 +36,7 @@ impl piet::TextStorage for ValidatedString {
 }
 
 impl EditableText for ValidatedString {
-    fn cursor(&self, position: usize) -> Option<StringCursor> {
+    fn cursor(&'_ self, position: usize) -> Option<StringCursor<'_>> {
         self.value.cursor(position)
     }
 
@@ -44,7 +44,7 @@ impl EditableText for ValidatedString {
         self.value.edit(range, new);
     }
 
-    fn slice(&self, range: Range<usize>) -> Option<Cow<str>> {
+    fn slice(&'_ self, range: Range<usize>) -> Option<Cow<'_, str>> {
         self.value.slice(range)
     }
 

@@ -115,6 +115,8 @@ struct Window {
     height: f64,
     x: Option<f64>,
     y: Option<f64>,
+    /// Ignore Mouse While Running and Not In Focus
+    mouse_pass_through_while_running: bool,
 }
 
 impl Default for Window {
@@ -124,6 +126,7 @@ impl Default for Window {
             height: 500.0,
             x: None,
             y: None,
+            mouse_pass_through_while_running: false,
         }
     }
 }
@@ -282,6 +285,14 @@ impl Config {
         self.window.x = Some(x);
         self.window.y = Some(y);
         self.save_config();
+    }
+
+    pub fn get_mouse_pass_through_while_running(&self) -> bool {
+        self.window.mouse_pass_through_while_running
+    }
+
+    pub fn set_mouse_pass_through_while_running(&mut self, b: bool) {
+        self.window.mouse_pass_through_while_running = b;
     }
 
     // Just directly construct the HotkeySystem from the config.
