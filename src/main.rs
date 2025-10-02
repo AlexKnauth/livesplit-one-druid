@@ -29,8 +29,10 @@ mod hotkey_button;
 mod layout_editor;
 mod map_scope;
 mod run_editor;
-mod settings_editor;
+mod hotkeys_editor;
 mod settings_table;
+mod server;
+mod server_editor;
 mod timer_form;
 
 mod software_renderer;
@@ -65,7 +67,8 @@ pub struct MainState {
     config: Rc<RefCell<Config>>,
     run_editor: Option<OpenWindow<run_editor::State>>,
     layout_editor: Option<OpenWindow<layout_editor::State>>,
-    settings_editor: Option<OpenWindow<settings_editor::State>>,
+    hotkeys_editor: Option<OpenWindow<hotkeys_editor::State>>,
+    server_editor: Option<OpenWindow<server_editor::State>>,
     image_cache: Rc<RefCell<ImageCache>>,
     mouse_pass_through: bool,
 }
@@ -107,6 +110,8 @@ impl MainState {
         #[cfg(feature = "auto-splitting")]
         config.maybe_load_auto_splitter(&auto_splitter, timer.clone());
 
+        config.maybe_start_server(timer.clone());
+
         Self {
             timer,
             #[cfg(feature = "auto-splitting")]
@@ -119,7 +124,8 @@ impl MainState {
             config: Rc::new(RefCell::new(config)),
             run_editor: None,
             layout_editor: None,
-            settings_editor: None,
+            hotkeys_editor: None,
+            server_editor: None,
             image_cache: Rc::new(RefCell::new(ImageCache::new())),
             mouse_pass_through: false,
         }
@@ -154,19 +160,35 @@ impl Lens<MainState, layout_editor::State> for LayoutEditorLens {
     }
 }
 
-struct SettingsEditorLens;
+struct HotkeysEditorLens;
 
-impl Lens<MainState, settings_editor::State> for SettingsEditorLens {
-    fn with<V, F: FnOnce(&settings_editor::State) -> V>(&self, data: &MainState, f: F) -> V {
-        f(&data.settings_editor.as_ref().unwrap().state)
+impl Lens<MainState, hotkeys_editor::State> for HotkeysEditorLens {
+    fn with<V, F: FnOnce(&hotkeys_editor::State) -> V>(&self, data: &MainState, f: F) -> V {
+        f(&data.hotkeys_editor.as_ref().unwrap().state)
     }
 
-    fn with_mut<V, F: FnOnce(&mut settings_editor::State) -> V>(
+    fn with_mut<V, F: FnOnce(&mut hotkeys_editor::State) -> V>(
         &self,
         data: &mut MainState,
         f: F,
     ) -> V {
-        f(&mut data.settings_editor.as_mut().unwrap().state)
+        f(&mut data.hotkeys_editor.as_mut().unwrap().state)
+    }
+}
+
+struct ServerEditorLens;
+
+impl Lens<MainState, server_editor::State> for ServerEditorLens {
+    fn with<V, F: FnOnce(&server_editor::State) -> V>(&self, data: &MainState, f: F) -> V {
+        f(&data.server_editor.as_ref().unwrap().state)
+    }
+
+    fn with_mut<V, F: FnOnce(&mut server_editor::State) -> V>(
+        &self,
+        data: &mut MainState,
+        f: F,
+    ) -> V {
+        f(&mut data.server_editor.as_mut().unwrap().state)
     }
 }
 

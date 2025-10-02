@@ -20,8 +20,8 @@ use crate::{
         BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP, PRIMARY_LIGHT,
         SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
     },
-    layout_editor, run_editor, settings_editor, software_renderer, LayoutEditorLens, MainState,
-    OpenWindow, RunEditorLens, SettingsEditorLens, HOTKEY_SYSTEM,
+    hotkeys_editor, layout_editor, run_editor, server_editor, software_renderer, HotkeysEditorLens, LayoutEditorLens, MainState,
+    OpenWindow, RunEditorLens, ServerEditorLens, HOTKEY_SYSTEM,
 };
 
 struct WithMenu<T> {
@@ -112,6 +112,7 @@ const CONTEXT_MENU_SET_COMPARISON: Selector<String> = Selector::new("context-men
 const CONTEXT_MENU_SET_TIMING_METHOD: Selector<TimingMethod> =
     Selector::new("context-menu-set-timing-method");
 const CONTEXT_MENU_EDIT_SETTINGS: Selector = Selector::new("context-menu-edit-settings");
+const CONTEXT_MENU_EDIT_SERVER: Selector = Selector::new("context-menu-edit-server");
 
 impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut MainState, env: &Env) {
@@ -131,7 +132,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                 if (event.button.is_right() || (event.button.is_left() && event.mods.ctrl()))
                     && data.run_editor.is_none()
                     && data.layout_editor.is_none()
-                    && data.settings_editor.is_none()
+                    && data.hotkeys_editor.is_none()
+                    && data.server_editor.is_none()
                 {
                     let mut compare_against = Menu::new("Compare Against");
 
@@ -311,7 +313,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             .entry(control_menu)
                             .entry(compare_against)
                             .separator()
-                            .entry(MenuItem::new("Settings").command(CONTEXT_MENU_EDIT_SETTINGS))
+                            .entry(MenuItem::new("Hotkeys").command(CONTEXT_MENU_EDIT_SETTINGS))
+                            .entry(MenuItem::new("Server").command(CONTEXT_MENU_EDIT_SERVER))
                             .separator()
                             .entry(
                                 MenuItem::new("Exit").command(
@@ -453,8 +456,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         .unwrap()
                         .deactivate();
                     let window =
-                        WindowDesc::new(settings_editor::root_widget().lens(SettingsEditorLens))
-                            .title("Settings")
+                        WindowDesc::new(hotkeys_editor::root_widget().lens(HotkeysEditorLens))
+                            .title("Hotkeys")
                             .with_min_size((550.0, 400.0))
                             .window_size((550.0, 450.0))
                             // TODO: WindowLevel::Modal(ctx.window().clone())
@@ -463,9 +466,24 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     let window_id = window.id;
                     ctx.new_window(window);
                     let config = HOTKEY_SYSTEM.read().unwrap().as_ref().unwrap().config();
-                    data.settings_editor = Some(OpenWindow {
+                    data.hotkeys_editor = Some(OpenWindow {
                         id: window_id,
-                        state: settings_editor::State::new(config),
+                        state: hotkeys_editor::State::new(config),
+                    });
+                } else if command.is(CONTEXT_MENU_EDIT_SERVER) {
+                    let window =
+                        WindowDesc::new(server_editor::root_widget().lens(ServerEditorLens))
+                            .title("Server")
+                            .with_min_size((400.0, 200.0))
+                            .window_size((400.0, 200.0))
+                            // TODO: WindowLevel::Modal(ctx.window().clone())
+                            .set_level(WindowLevel::AppWindow)
+                            .set_always_on_top(true);
+                    let window_id = window.id;
+                    ctx.new_window(window);
+                    data.server_editor = Some(OpenWindow {
+                        id: window_id,
+                        state: server_editor::State::new(data.config.borrow().get_server().clone()),
                     });
                 } else if let Some(intent) = command.get(CONTEXT_MENU_SET_INTENT) {
                     self.intent = *intent;
@@ -900,7 +918,7 @@ impl AppDelegate<MainState> for WindowManagement {
             }
         }
 
-        if let Some(window) = &data.settings_editor {
+        if let Some(window) = &data.hotkeys_editor {
             if id == window.id {
                 if window.state.closed_with_ok {
                     let hotkey_config = window.state.editor.borrow_mut().take().unwrap();
@@ -912,8 +930,20 @@ impl AppDelegate<MainState> for WindowManagement {
                         .set_config(hotkey_config);
                     data.config.borrow_mut().set_hotkeys(hotkey_config);
                 }
-                data.settings_editor = None;
+                data.hotkeys_editor = None;
                 let _ = HOTKEY_SYSTEM.write().unwrap().as_mut().unwrap().activate();
+                return;
+            }
+        }
+
+        if let Some(window) = &data.server_editor {
+            if id == window.id {
+                if window.state.closed_with_ok {
+                    let new_server = window.state.editor.borrow_mut().take().unwrap();
+                    // TODO: stop and restart server if changed?
+                    data.config.borrow_mut().set_server(new_server);
+                }
+                data.server_editor = None;
                 return;
             }
         }

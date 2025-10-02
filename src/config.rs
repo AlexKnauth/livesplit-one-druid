@@ -9,6 +9,7 @@ use livesplit_core::{
         saver::livesplit::save_timer,
         LinkedLayout,
     },
+    settings::{Field, SettingsDescription, Value},
     HotkeyConfig, HotkeySystem, Run, RunEditor, Segment, SharedTimer, Timer, TimingMethod,
 };
 use log::error;
@@ -22,7 +23,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{cli, timer_form, LayoutData, MainState};
+use crate::{cli, server, timer_form, LayoutData, MainState};
 
 #[derive(Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -37,6 +38,8 @@ pub struct Config {
     window: Window,
     #[serde(default)]
     hotkeys: HotkeyConfig,
+    #[serde(default)]
+    server: Server,
 }
 
 #[derive(Default, Deserialize, Serialize)]
@@ -125,6 +128,51 @@ impl Default for Window {
             x: None,
             y: None,
         }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+#[serde(default)]
+pub struct Server {
+    #[serde(default)]
+    pub enable: bool,
+    pub port: i64,
+}
+
+impl Default for Server {
+    fn default() -> Server {
+        Self {
+            enable: false,
+            port: 16834,
+        }
+    }
+}
+
+impl Server {
+    pub fn settings_description(&self) -> SettingsDescription {
+        SettingsDescription::with_fields(vec![
+            Field::new(
+                "Enable Server".into(),
+                "Whether to enable the server on startup.".into(),
+                self.enable.into(),
+            ),
+            Field::new(
+                "Server Port".into(),
+                "Which port the server should use.".into(),
+                self.port.into(),
+            ),
+        ])
+    }
+
+    pub fn set_value(&mut self, index: usize, value: Value) -> Result<(), ()> {
+        match index {
+            0 => self.enable = value.into(),
+            1 => self.port = value.into(),
+            _ => panic!("Unsupported Setting Index"),
+        }
+
+        Ok(())
     }
 }
 
@@ -576,6 +624,23 @@ impl Config {
                 // TODO: Error chain
                 log::error!("Auto Splitter failed to load: {}", e);
             }
+        }
+    }
+
+    pub fn get_server(&self) -> &Server {
+        &self.server
+    }
+
+    pub fn set_server(&mut self, server: Server) {
+        self.server = server;
+    }
+
+    pub fn maybe_start_server(
+        &self,
+        timer: SharedTimer,
+    ) {
+        if self.server.enable {
+            server::server_start(self.server.port, timer);
         }
     }
 }

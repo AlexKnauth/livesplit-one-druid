@@ -258,7 +258,24 @@ pub fn widget<T: ListIter<SettingsRow>>() -> impl Widget<T> {
                             Value::OptionalTimingMethod(_) => Box::new(optional_timing_method()),
                             Value::ListGradient(_) => Box::new(list_gradient()),
                             Value::Hotkey(_) => Box::new(hotkey()),
-                            Value::Int(_) => todo!(),
+                            Value::Int(_) => Box::new(
+                                TextBox::new()
+                                    .lens(Identity.map(
+                                        |row: &SettingsRow| match &row.value {
+                                            Value::Int(v) => v.to_string(),
+                                            // TODO: What
+                                            _ => String::new(),
+                                        },
+                                        |row: &mut SettingsRow, value: String| {
+                                            if let Value::Int(v) = &mut row.value {
+                                                if let Ok(i) = value.parse() {
+                                                    *v = i;
+                                                }
+                                            }
+                                        },
+                                    ))
+                                    .expand_width(),
+                            ),
                             Value::DeltaGradient(_) => Box::new(delta_gradient()),
                             Value::ColumnKind(_) => Box::new(column_kind()),
                         },
