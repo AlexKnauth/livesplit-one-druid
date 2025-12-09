@@ -847,7 +847,7 @@ fn build_save_layout_as() -> druid::Command {
     )
 }
 
-const DRAG_EVENT_BATCH_SIZE: usize = 5;
+const DRAG_EVENT_BATCH_SIZE: usize = 20;
 
 struct DragWindowController {
     /// The position of the mouse at the time dragging starts,
@@ -882,12 +882,27 @@ impl<T, W: Widget<T>> Controller<T, W> for DragWindowController {
                     let old_pos = ctx.window().get_position();
                     self.old_pos.truncate(DRAG_EVENT_BATCH_SIZE - 1);
                     self.old_pos.push_front(old_pos);
-                    let new_pos = self
-                        .old_pos
-                        .iter()
-                        .map(|p| *p + within_window_change)
-                        .min_by(|a, b| a.distance(old_pos).total_cmp(&b.distance(old_pos)))
-                        .unwrap_or(old_pos);
+                    let mut new_pos = old_pos + within_window_change;
+                    // scan for a local minimum, not a global minimum
+                    for i in 0..self.old_pos.len() {
+                        let old_a = self.old_pos[i];
+                        let new_a = old_a + within_window_change;
+                        if let Some(&old_b) = self.old_pos.get(i + 1) {
+                            let new_b = old_b + within_window_change;
+                            if new_b.distance(old_pos) < new_a.distance(old_pos) {
+                                // haven't hit a local minimum yet, still going downhill
+                                continue;
+                            } else {
+                                // a is a local minimum, because b is starting to go back uphill
+                                new_pos = new_a;
+                                self.old_pos.truncate(i + 1);
+                                break;
+                            }
+                        } else {
+                            new_pos = new_a;
+                            break;
+                        }
+                    }
                     ctx.window().set_position(new_pos)
                 }
             }
