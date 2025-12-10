@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc};
+use std::{collections::VecDeque, path::Path, sync::Arc};
 
 use druid::{
     commands,
@@ -847,13 +847,23 @@ fn build_save_layout_as() -> druid::Command {
     )
 }
 
+const DRAG_EVENT_BATCH_SIZE: usize = 20;
+
 struct DragWindowController {
+    /// The position of the mouse at the time dragging starts,
+    /// in the coordinate space of the window.
     init_pos: Option<Point>,
+    /// The old position of the window at the last 5 drag events,
+    /// in display points measured relative to the parent.
+    old_pos: VecDeque<Point>,
 }
 
 impl DragWindowController {
     pub fn new() -> Self {
-        DragWindowController { init_pos: None }
+        DragWindowController {
+            init_pos: None,
+            old_pos: VecDeque::with_capacity(DRAG_EVENT_BATCH_SIZE),
+        }
     }
 }
 
@@ -862,13 +872,37 @@ impl<T, W: Widget<T>> Controller<T, W> for DragWindowController {
         match event {
             Event::MouseDown(me) if me.buttons.has_left() => {
                 ctx.set_active(true);
+                self.old_pos.clear();
+                self.old_pos.push_front(ctx.window().get_position());
                 self.init_pos = Some(me.window_pos)
             }
             Event::MouseMove(me) if ctx.is_active() && me.buttons.has_left() => {
                 if let Some(init_pos) = self.init_pos {
                     let within_window_change = me.window_pos.to_vec2() - init_pos.to_vec2();
                     let old_pos = ctx.window().get_position();
-                    let new_pos = old_pos + within_window_change;
+                    self.old_pos.truncate(DRAG_EVENT_BATCH_SIZE - 1);
+                    self.old_pos.push_front(old_pos);
+                    let mut new_pos = old_pos + within_window_change;
+                    // scan for a local minimum, not a global minimum
+                    for i in 0..self.old_pos.len() {
+                        let old_a = self.old_pos[i];
+                        let new_a = old_a + within_window_change;
+                        if let Some(&old_b) = self.old_pos.get(i + 1) {
+                            let new_b = old_b + within_window_change;
+                            if new_b.distance(old_pos) < new_a.distance(old_pos) {
+                                // haven't hit a local minimum yet, still going downhill
+                                continue;
+                            } else {
+                                // a is a local minimum, because b is starting to go back uphill
+                                new_pos = new_a;
+                                self.old_pos.truncate(i + 1);
+                                break;
+                            }
+                        } else {
+                            new_pos = new_a;
+                            break;
+                        }
+                    }
                     ctx.window().set_position(new_pos)
                 }
             }
