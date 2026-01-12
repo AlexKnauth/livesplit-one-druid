@@ -7,7 +7,7 @@ use druid::{
     widget::{Controller, Flex, Label, Painter, Slider, TextBox},
     BoxConstraints, Color, Cursor, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
     LifeCycleCtx, LinearGradient, MouseButton, PaintCtx, Point, RenderContext, Selector, Size,
-    Target, TextAlignment, UnitPoint, UpdateCtx, Vec2, Widget, WidgetExt, WidgetPod, WindowConfig,
+    Target, TextAlignment, UnitPoint, UpdateCtx, Widget, WidgetExt, WidgetPod, WindowConfig,
     WindowId, WindowLevel,
 };
 
@@ -765,10 +765,10 @@ impl Widget<ColorState> for ColorButton {
                                 .resizable(false)
                                 .transparent(true)
                                 .window_size(Size::new(225., 355.))
-                                .set_position(ctx.to_window(
-                                    ctx.size().to_rect().center()
-                                        + Vec2::new(-0.5 * 225.0, 0.5 * ctx.size().height),
-                                ))
+                                .set_position(ctx.to_window(Point::new(
+                                    ctx.size().width / 2.0 - 225.0 / 2.0,
+                                    ctx.size().height * 2.0,
+                                )))
                                 .set_level(WindowLevel::DropDown(ctx.window().clone())),
                             color_picker(ctx.window_id()),
                             *data,
