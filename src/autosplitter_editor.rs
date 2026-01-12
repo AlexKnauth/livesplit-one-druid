@@ -45,6 +45,9 @@ pub struct State {
     pub runtime: Rc<Runtime<SharedTimer>>,
     #[data(ignore)]
     pub closed_with_ok: bool,
+    /// Original settings map when the dialog was opened, used to revert on cancel.
+    #[data(ignore)]
+    original_settings: Option<SettingsMap>,
 }
 
 #[derive(Clone, Data, PartialEq)]
@@ -95,9 +98,16 @@ impl State {
         let rows = build_rows(&widgets, settings_map.as_ref());
         Self {
             rows: Arc::new(rows),
+            original_settings: settings_map,
             runtime,
             closed_with_ok: false,
         }
+    }
+
+    /// Revert the runtime settings to the original state when the dialog was opened.
+    pub(crate) fn revert_settings(&self) {
+        let settings = self.original_settings.clone().unwrap_or_default();
+        self.runtime.set_settings_map(settings);
     }
 
     /// Sync UI state with the runtime's current settings.

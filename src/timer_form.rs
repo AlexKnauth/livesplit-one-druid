@@ -137,11 +137,17 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                 }
             }
             Event::MouseUp(event) => {
+                #[cfg(feature = "auto-splitting")]
+                let autosplitter_editor_is_none = data.autosplitter_editor.is_none();
+                #[cfg(not(feature = "auto-splitting"))]
+                let autosplitter_editor_is_none = true;
+
                 if (event.button.is_right() || (event.button.is_left() && event.mods.ctrl()))
                     && data.run_editor.is_none()
                     && data.layout_editor.is_none()
                     && data.window_settings_editor.is_none()
                     && data.hotkeys_editor.is_none()
+                    && autosplitter_editor_is_none
                 {
                     let mut compare_against = Menu::new("Compare Against");
 
@@ -1027,6 +1033,9 @@ impl AppDelegate<MainState> for WindowManagement {
         #[cfg(feature = "auto-splitting")]
         if let Some(window) = &data.autosplitter_editor {
             if id == window.id {
+                if !window.state.closed_with_ok {
+                    window.state.revert_settings();
+                }
                 data.autosplitter_editor = None;
                 return;
             }
