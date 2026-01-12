@@ -8,9 +8,14 @@ use druid::{
     commands::{self, CLOSE_WINDOW},
     lens::Identity,
     widget::{Button, Controller, Flex, Label, List, ListIter, Scroll, Switch},
-    Data, Env, Event, EventCtx, LensExt, LifeCycle, LifeCycleCtx, Point, RenderContext, TimerToken,
-    Widget, WidgetExt, WindowConfig, WindowId, WindowLevel, WindowSizePolicy,
+    Data, Env, Event, EventCtx, LensExt, LifeCycle, LifeCycleCtx, Point, RenderContext, Selector,
+    TimerToken, Widget, WidgetExt, WindowConfig, WindowId, WindowLevel, WindowSizePolicy,
 };
+
+/// Command to request showing a file dialog for a setting.
+/// Payload is (key, filters, start_dir).
+const REQUEST_FILE_DIALOG: Selector<(Arc<str>, Arc<Vec<FileFilter>>, Option<std::path::PathBuf>)> =
+    Selector::new("autosplitter-request-file-dialog");
 use livesplit_core::{
     auto_splitting::{
         settings::{
@@ -27,6 +32,19 @@ use crate::{
     consts::{BUTTON_SPACING, DIALOG_BUTTON_HEIGHT, DIALOG_BUTTON_WIDTH, MARGIN},
 };
 
+/// Tracks a pending file dialog request to be shown in the next AnimFrame.
+/// This is necessary because showing a native file dialog synchronously inside
+/// an event handler causes crashes on Windows (RefCell already borrowed).
+#[derive(Clone, Default)]
+struct PendingFileSelect {
+    /// The key of the setting row that requested the file dialog
+    key: Option<Arc<str>>,
+    /// The file filters to use
+    filters: Arc<Vec<FileFilter>>,
+    /// The starting directory for the dialog
+    start_dir: Option<std::path::PathBuf>,
+}
+
 #[derive(Clone, Data)]
 pub struct State {
     rows: Arc<Vec<SettingRow>>,
@@ -34,6 +52,8 @@ pub struct State {
     pub runtime: Rc<Runtime<SharedTimer>>,
     #[data(ignore)]
     pub closed_with_ok: bool,
+    #[data(ignore)]
+    pending_file_select: Rc<std::cell::RefCell<PendingFileSelect>>,
 }
 
 #[derive(Clone, Data, PartialEq)]
@@ -86,6 +106,7 @@ impl State {
             rows: Arc::new(rows),
             runtime,
             closed_with_ok: false,
+            pending_file_select: Rc::new(std::cell::RefCell::new(PendingFileSelect::default())),
         }
     }
 
@@ -268,7 +289,71 @@ impl<W: Widget<State>> Controller<State, W> for SyncController {
         data: &mut State,
         env: &Env,
     ) {
+        // Handle file dialog request command
+        if let Event::Command(cmd) = event {
+            if let Some((key, filters, start_dir)) = cmd.get(REQUEST_FILE_DIALOG) {
+                // Store the pending file dialog request
+                let mut pending = data.pending_file_select.borrow_mut();
+                pending.key = Some(key.clone());
+                pending.filters = filters.clone();
+                pending.start_dir = start_dir.clone();
+                ctx.set_handled();
+                return;
+            }
+        }
+
         if let Event::AnimFrame(_) = event {
+            // Check for pending file dialog request
+            let pending_request = {
+                let pending = data.pending_file_select.borrow();
+                if pending.key.is_some() {
+                    Some((
+                        pending.key.clone().unwrap(),
+                        pending.filters.clone(),
+                        pending.start_dir.clone(),
+                    ))
+                } else {
+                    None
+                }
+            };
+
+            if let Some((key, filters, start_dir)) = pending_request {
+                // Clear the pending request first
+                {
+                    let mut pending = data.pending_file_select.borrow_mut();
+                    pending.key = None;
+                }
+
+                // Show the file dialog
+                if let Some(selected_path) = show_file_dialog(&filters, start_dir.as_deref()) {
+                    let path_str: Arc<str> = selected_path.to_string_lossy().into();
+
+                    // Update the setting row with the selected path
+                    let rows = Arc::make_mut(&mut data.rows);
+                    for row in rows.iter_mut() {
+                        if row.key == key {
+                            if let SettingRowValue::FileSelect {
+                                path: ref mut p, ..
+                            } = &mut row.value
+                            {
+                                *p = path_str.clone();
+                            }
+                            break;
+                        }
+                    }
+
+                    // Also update the runtime's settings map
+                    let mut settings_map = data.runtime.settings_map().unwrap_or_default();
+                    settings_map.insert(
+                        key.to_string().into(),
+                        SettingValue::String(path_str.to_string().into()),
+                    );
+                    data.runtime.set_settings_map(settings_map);
+
+                    ctx.request_update();
+                }
+            }
+
             // Sync with runtime settings
             if data.sync_from_runtime() {
                 ctx.request_update();
@@ -560,7 +645,7 @@ fn setting_value_widget() -> impl Widget<SettingRow> {
                             "Browse...".to_string()
                         }
                     })
-                    .on_click(move |_ctx, row: &mut SettingRow, _env| {
+                    .on_click(move |ctx, row: &mut SettingRow, _env| {
                         // Get current path for starting directory
                         let current_path =
                             if let SettingRowValue::FileSelect { path, .. } = &row.value {
@@ -575,17 +660,12 @@ fn setting_value_widget() -> impl Widget<SettingRow> {
                                 None
                             };
 
-                        // Show file dialog with filters
-                        let result = show_file_dialog(&filters_clone, current_path.as_deref());
-
-                        if let Some(path) = result {
-                            if let SettingRowValue::FileSelect {
-                                path: ref mut p, ..
-                            } = &mut row.value
-                            {
-                                *p = path.to_string_lossy().into();
-                            }
-                        }
+                        // Send command to show file dialog (deferred to avoid RefCell crash)
+                        ctx.submit_command(REQUEST_FILE_DIALOG.with((
+                            row.key.clone(),
+                            filters_clone.clone(),
+                            current_path,
+                        )));
                     })
                     .fix_width(200.0),
                 )
@@ -645,9 +725,11 @@ fn show_file_dialog(
         dialog = dialog.add_filter("Supported Files", &ext_refs);
     }
 
-    // Set starting directory if provided
+    // Set starting directory if provided and it exists
     if let Some(dir) = start_dir {
-        dialog = dialog.set_location(dir);
+        if dir.is_dir() {
+            dialog = dialog.set_location(dir);
+        }
     }
 
     dialog.show_open_single_file().ok().flatten()
