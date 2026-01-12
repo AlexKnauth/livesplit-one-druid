@@ -535,18 +535,23 @@ fn setting_row_widget() -> impl Widget<SettingRow> {
                         .background(druid::widget::Painter::new(title_background)),
                 )
             } else {
-                // Setting row: label + value widget
+                // Setting row: two columns, each taking half the width
                 Box::new(
                     Flex::row()
-                        .with_spacer(indent)
-                        .with_child(
-                            Label::new(|row: &SettingRow, _: &Env| row.description.to_string())
-                                .with_line_break_mode(druid::widget::LineBreaking::WordWrap)
-                                .fix_width(300.0 - indent)
-                                .controller(RowTooltipController::new()),
+                        .with_flex_child(
+                            Flex::row()
+                                .with_spacer(indent)
+                                .with_flex_child(
+                                    Label::new(|row: &SettingRow, _: &Env| {
+                                        row.description.to_string()
+                                    })
+                                    .with_line_break_mode(druid::widget::LineBreaking::WordWrap)
+                                    .controller(RowTooltipController::new()),
+                                    1.0,
+                                ),
+                            1.0,
                         )
-                        .with_flex_spacer(1.0)
-                        .with_child(setting_value_widget())
+                        .with_flex_child(setting_value_widget().expand_width(), 1.0)
                         .padding(8.0)
                         .background(druid::widget::Painter::new(setting_background)),
                 )
@@ -578,12 +583,16 @@ fn setting_value_widget() -> impl Widget<SettingRow> {
                 // Title rows don't have a value widget, but this is needed for exhaustiveness
                 Box::new(druid::widget::SizedBox::empty())
             }
-            SettingRowValue::Bool(_) => Box::new(Switch::new().lens(Identity.map(
-                |row: &SettingRow| matches!(row.value, SettingRowValue::Bool(true)),
-                |row: &mut SettingRow, val: bool| {
-                    row.value = SettingRowValue::Bool(val);
-                },
-            ))),
+            SettingRowValue::Bool(_) => Box::new(
+                Switch::new()
+                    .lens(Identity.map(
+                        |row: &SettingRow| matches!(row.value, SettingRowValue::Bool(true)),
+                        |row: &mut SettingRow, val: bool| {
+                            row.value = SettingRowValue::Bool(val);
+                        },
+                    ))
+                    .center(),
+            ),
             SettingRowValue::Choice { options, .. } => {
                 let options_clone: Arc<Vec<ChoiceOption>> = options.clone();
                 Box::new(
@@ -605,7 +614,7 @@ fn setting_value_widget() -> impl Widget<SettingRow> {
                                 }
                             },
                         ))
-                        .fix_width(200.0),
+                        .expand_width(),
                 )
             }
             SettingRowValue::FileSelect { filters, .. } => {
@@ -648,7 +657,7 @@ fn setting_value_widget() -> impl Widget<SettingRow> {
                             current_path,
                         )));
                     })
-                    .fix_width(200.0),
+                    .expand_width(),
                 )
             }
         },
