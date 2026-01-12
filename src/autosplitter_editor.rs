@@ -9,13 +9,9 @@ use druid::{
     lens::Identity,
     widget::{Button, Controller, Flex, Label, List, ListIter, Scroll, Switch},
     Data, Env, Event, EventCtx, LensExt, LifeCycle, LifeCycleCtx, Point, RenderContext, Selector,
-    TimerToken, Widget, WidgetExt, WindowConfig, WindowId, WindowLevel, WindowSizePolicy,
+    Target, TimerToken, Widget, WidgetExt, WindowConfig, WindowId, WindowLevel, WindowSizePolicy,
 };
 
-/// Command to request showing a file dialog for a setting.
-/// Payload is (key, filters, start_dir).
-const REQUEST_FILE_DIALOG: Selector<(Arc<str>, Arc<Vec<FileFilter>>, Option<std::path::PathBuf>)> =
-    Selector::new("autosplitter-request-file-dialog");
 use livesplit_core::{
     auto_splitting::{
         settings::{
@@ -32,18 +28,15 @@ use crate::{
     consts::{BUTTON_SPACING, DIALOG_BUTTON_HEIGHT, DIALOG_BUTTON_WIDTH, MARGIN},
 };
 
-/// Tracks a pending file dialog request to be shown in the next AnimFrame.
-/// This is necessary because showing a native file dialog synchronously inside
-/// an event handler causes crashes on Windows (RefCell already borrowed).
-#[derive(Clone, Default)]
-struct PendingFileSelect {
-    /// The key of the setting row that requested the file dialog
-    key: Option<Arc<str>>,
-    /// The file filters to use
-    filters: Arc<Vec<FileFilter>>,
-    /// The starting directory for the dialog
-    start_dir: Option<std::path::PathBuf>,
-}
+/// Command to request showing a file dialog for a setting.
+/// Payload is (key, filters, start_dir).
+const REQUEST_FILE_DIALOG: Selector<(Arc<str>, Arc<Vec<FileFilter>>, Option<std::path::PathBuf>)> =
+    Selector::new("autosplitter-request-file-dialog");
+
+/// Command sent when a file dialog completes with a result.
+/// Payload is (key, selected_path).
+const FILE_DIALOG_RESULT: Selector<(Arc<str>, std::path::PathBuf)> =
+    Selector::new("autosplitter-file-dialog-result");
 
 #[derive(Clone, Data)]
 pub struct State {
@@ -52,8 +45,6 @@ pub struct State {
     pub runtime: Rc<Runtime<SharedTimer>>,
     #[data(ignore)]
     pub closed_with_ok: bool,
-    #[data(ignore)]
-    pending_file_select: Rc<std::cell::RefCell<PendingFileSelect>>,
 }
 
 #[derive(Clone, Data, PartialEq)]
@@ -106,7 +97,6 @@ impl State {
             rows: Arc::new(rows),
             runtime,
             closed_with_ok: false,
-            pending_file_select: Rc::new(std::cell::RefCell::new(PendingFileSelect::default())),
         }
     }
 
@@ -292,68 +282,59 @@ impl<W: Widget<State>> Controller<State, W> for SyncController {
         // Handle file dialog request command
         if let Event::Command(cmd) = event {
             if let Some((key, filters, start_dir)) = cmd.get(REQUEST_FILE_DIALOG) {
-                // Store the pending file dialog request
-                let mut pending = data.pending_file_select.borrow_mut();
-                pending.key = Some(key.clone());
-                pending.filters = filters.clone();
-                pending.start_dir = start_dir.clone();
+                let key = key.clone();
+                let filters = filters.clone();
+                let start_dir = start_dir.clone();
+                let event_sink = ctx.get_external_handle();
+
+                // Spawn a thread to show the file dialog
+                std::thread::spawn(move || {
+                    if let Some(path) = show_file_dialog(&filters, start_dir.as_deref()) {
+                        let _ = event_sink.submit_command(
+                            FILE_DIALOG_RESULT,
+                            (key, path),
+                            Target::Auto,
+                        );
+                    }
+                });
+
+                ctx.set_handled();
+                return;
+            }
+
+            // Handle file dialog result
+            if let Some((key, path)) = cmd.get(FILE_DIALOG_RESULT) {
+                let path_str: Arc<str> = path.to_string_lossy().into();
+
+                // Update the setting row with the selected path
+                let rows = Arc::make_mut(&mut data.rows);
+                for row in rows.iter_mut() {
+                    if row.key == *key {
+                        if let SettingRowValue::FileSelect {
+                            path: ref mut p, ..
+                        } = &mut row.value
+                        {
+                            *p = path_str.clone();
+                        }
+                        break;
+                    }
+                }
+
+                // Also update the runtime's settings map
+                let mut settings_map = data.runtime.settings_map().unwrap_or_default();
+                settings_map.insert(
+                    key.to_string().into(),
+                    SettingValue::String(path_str.to_string().into()),
+                );
+                data.runtime.set_settings_map(settings_map);
+
+                ctx.request_update();
                 ctx.set_handled();
                 return;
             }
         }
 
         if let Event::AnimFrame(_) = event {
-            // Check for pending file dialog request
-            let pending_request = {
-                let pending = data.pending_file_select.borrow();
-                if pending.key.is_some() {
-                    Some((
-                        pending.key.clone().unwrap(),
-                        pending.filters.clone(),
-                        pending.start_dir.clone(),
-                    ))
-                } else {
-                    None
-                }
-            };
-
-            if let Some((key, filters, start_dir)) = pending_request {
-                // Clear the pending request first
-                {
-                    let mut pending = data.pending_file_select.borrow_mut();
-                    pending.key = None;
-                }
-
-                // Show the file dialog
-                if let Some(selected_path) = show_file_dialog(&filters, start_dir.as_deref()) {
-                    let path_str: Arc<str> = selected_path.to_string_lossy().into();
-
-                    // Update the setting row with the selected path
-                    let rows = Arc::make_mut(&mut data.rows);
-                    for row in rows.iter_mut() {
-                        if row.key == key {
-                            if let SettingRowValue::FileSelect {
-                                path: ref mut p, ..
-                            } = &mut row.value
-                            {
-                                *p = path_str.clone();
-                            }
-                            break;
-                        }
-                    }
-
-                    // Also update the runtime's settings map
-                    let mut settings_map = data.runtime.settings_map().unwrap_or_default();
-                    settings_map.insert(
-                        key.to_string().into(),
-                        SettingValue::String(path_str.to_string().into()),
-                    );
-                    data.runtime.set_settings_map(settings_map);
-
-                    ctx.request_update();
-                }
-            }
-
             // Sync with runtime settings
             if data.sync_from_runtime() {
                 ctx.request_update();
