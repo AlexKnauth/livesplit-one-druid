@@ -8,9 +8,11 @@ use druid::{
     theme,
     widget::{Button, Controller, Flex, Label, LabelText, Painter, Scroll, TextBox},
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LensExt, LifeCycle, LifeCycleCtx,
-    PaintCtx, Point, RenderContext, Size, Target, UpdateCtx, Widget, WidgetExt, WindowConfig,
-    WindowId, WindowLevel,
+    PaintCtx, Point, RenderContext, Selector, Size, Target, UpdateCtx, Widget, WidgetExt,
+    WindowConfig, WindowId, WindowLevel,
 };
+
+const DROPDOWN_CLOSED: Selector<()> = Selector::new("combo-box.dropdown-closed");
 
 struct CloseOnFocusLoss;
 
@@ -203,6 +205,11 @@ impl<W: Widget<String>, L: ComboList> Widget<String> for OnClick<W, L> {
                     return;
                 }
             }
+            Event::Command(cmd) => {
+                if cmd.is(DROPDOWN_CLOSED) {
+                    self.open_window = None;
+                }
+            }
             _ => {}
         }
         self.widget.event(ctx, event, data, env);
@@ -213,9 +220,6 @@ impl<W: Widget<String>, L: ComboList> Widget<String> for OnClick<W, L> {
     }
 
     fn update(&mut self, ctx: &mut UpdateCtx, old_data: &String, data: &String, env: &Env) {
-        if old_data != data {
-            self.open_window = None;
-        }
         self.widget.update(ctx, old_data, data, env)
     }
 
@@ -266,6 +270,12 @@ impl<W: Widget<usize>> Controller<usize, W> for DropdownToggleController {
                     ctx.submit_command(CLOSE_WINDOW.to(Target::Window(window_id)));
                     return; // Don't let button process this click
                 }
+            }
+        }
+        // Clear open_window when dropdown closes (even if same option selected)
+        if let Event::Command(cmd) = event {
+            if cmd.is(DROPDOWN_CLOSED) {
+                self.open_window.set(None);
             }
         }
         child.event(ctx, event, data, env);
@@ -339,6 +349,7 @@ fn drop_down(list: &impl ComboList) -> impl Widget<usize> {
             }))
             .on_click(move |ctx, selected_index, _env| {
                 *selected_index = index;
+                ctx.submit_command(DROPDOWN_CLOSED.to(Target::Global));
                 ctx.submit_command(CLOSE_WINDOW);
             });
         flex.add_child(label);
