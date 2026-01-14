@@ -5,12 +5,30 @@ use druid::{
     commands::CLOSE_WINDOW,
     kurbo::BezPath,
     lens::Identity,
+    piet::{PietText, Text, TextLayout, TextLayoutBuilder},
     theme,
     widget::{Button, Controller, Flex, Label, LabelText, Painter, Scroll, TextBox},
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LensExt, LifeCycle, LifeCycleCtx,
     PaintCtx, Point, RenderContext, Selector, Size, Target, UpdateCtx, Widget, WidgetExt,
     WindowConfig, WindowId, WindowLevel,
 };
+
+fn max_text_width(list: &impl ComboList, text: &mut PietText, env: &Env) -> f64 {
+    let font = env.get(theme::UI_FONT);
+    let mut max_width = 0.0;
+    for item in list.slice() {
+        if let Ok(layout) = text
+            .new_text_layout(item.as_str().to_string())
+            .font(font.family.clone(), font.size)
+            .build()
+        {
+            if layout.size().width > max_width {
+                max_width = layout.size().width;
+            }
+        }
+    }
+    max_width
+}
 
 const DROPDOWN_CLOSED: Selector<()> = Selector::new("combo-box.dropdown-closed");
 
@@ -47,8 +65,9 @@ impl<T, W: Widget<T>> Widget<T> for ComboBox<W> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.0.paint(ctx, data, env);
         let Size { width, height } = ctx.size();
+        ctx.clip(Size { width, height }.to_rect());
+        self.0.paint(ctx, data, env);
         let l_x = width - 24.0 + 7.0;
         let t_y = 0.5 * height - 2.0;
         let r_x = width - 7.0;
@@ -162,13 +181,15 @@ impl<W: Widget<String>, L: ComboList> Widget<String> for OnClick<W, L> {
                     if let Some(window_id) = self.open_window.take() {
                         ctx.submit_command(CLOSE_WINDOW.to(Target::Window(window_id)));
                     } else {
+                        let text_width = max_text_width(&self.list, &mut ctx.text(), env);
+                        let dropdown_width = (text_width + 14.0).max(width);
                         self.open_window = Some(ctx.new_sub_window(
                             WindowConfig::default()
                                 .show_titlebar(false)
                                 .resizable(false)
                                 .transparent(true)
                                 .window_size(Size::new(
-                                    width,
+                                    dropdown_width,
                                     25.0 * self.list.slice().len().min(8) as f64 + 2.0,
                                 ))
                                 .set_position(ctx.to_window(Point::new(0.0, height - 1.0)))
@@ -305,13 +326,15 @@ pub fn dynamic_list(list: impl ComboList) -> impl Widget<usize> {
             move |&index: &usize, _: &_| list.slice()[index].to_arc_str()
         })
         .on_click(move |ctx, &mut index: &mut usize, env| {
+            let text_width = max_text_width(&list, &mut ctx.text(), env);
+            let dropdown_width = (text_width + 14.0).max(ctx.size().width);
             let window_id = ctx.new_sub_window(
                 WindowConfig::default()
                     .show_titlebar(false)
                     .resizable(false)
                     .transparent(true)
                     .window_size(Size::new(
-                        ctx.size().width,
+                        dropdown_width,
                         25.0 * list.slice().len().min(8) as f64 + 2.0,
                     ))
                     .set_position(ctx.to_window(Point::new(0.0, ctx.size().height - 1.0)))
