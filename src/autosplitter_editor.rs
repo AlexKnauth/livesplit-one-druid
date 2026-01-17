@@ -1,4 +1,5 @@
 use std::{
+    path::Path,
     rc::Rc,
     sync::Arc,
     time::{Duration, Instant},
@@ -18,7 +19,7 @@ use livesplit_core::{
             FileFilter, Map as SettingsMap, Value as SettingValue, Widget as SettingsWidget,
             WidgetKind,
         },
-        Runtime,
+        wasi_path, Runtime,
     },
     SharedTimer,
 };
@@ -71,7 +72,7 @@ enum SettingRowValue {
         options: Arc<Vec<ChoiceOption>>,
     },
     FileSelect {
-        /// Current file path (empty string if none selected)
+        /// Current file path, in native format (empty string if none selected)
         path: Arc<str>,
         /// File filters for the dialog
         #[data(ignore)]
@@ -192,11 +193,11 @@ fn build_rows(widgets: &[SettingsWidget], settings_map: Option<&SettingsMap>) ->
             WidgetKind::FileSelect { filters } => {
                 let path = settings_map
                     .and_then(|m| m.get(widget.key.as_ref()))
-                    .and_then(|v| match v {
-                        SettingValue::String(s) => Some(s.clone()),
-                        _ => None,
-                    })
-                    .unwrap_or_else(|| "".into());
+                    .and_then(|v| v.as_string())
+                    .and_then(|s| wasi_path::to_native(s, false))
+                    .filter(|p| p.exists())
+                    .map(|p| p.to_string_lossy().into())
+                    .unwrap_or_default();
                 let indent = current_heading_level.map_or(0, |h| h + 1);
                 (
                     SettingRowValue::FileSelect {
@@ -255,7 +256,11 @@ impl ListIter<SettingRow> for State {
                         }
                     }
                     SettingRowValue::FileSelect { path, .. } => {
-                        SettingValue::String(path.to_string().into())
+                        if let Some(s) = wasi_path::from_native(Path::new(path.as_ref())) {
+                            SettingValue::String(s.into())
+                        } else {
+                            continue;
+                        }
                     }
                 };
                 new_map.insert(key.to_string().into(), setting_value);
@@ -334,7 +339,11 @@ impl<W: Widget<State>> Controller<State, W> for SyncController {
                 let mut settings_map = data.runtime.settings_map().unwrap_or_default();
                 settings_map.insert(
                     key.to_string().into(),
-                    SettingValue::String(path_str.to_string().into()),
+                    SettingValue::String(
+                        wasi_path::from_native(Path::new(path_str.as_ref()))
+                            .unwrap_or_default()
+                            .into(),
+                    ),
                 );
                 data.runtime.set_settings_map(settings_map);
 
