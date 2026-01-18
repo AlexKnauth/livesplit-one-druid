@@ -183,40 +183,42 @@ impl<W: Widget<String>, L: ComboList> Widget<String> for OnClick<W, L> {
                     } else {
                         let text_width = max_text_width(&self.list, &mut ctx.text(), env);
                         let dropdown_width = (text_width + 14.0).max(width);
-                        self.open_window = Some(ctx.new_sub_window(
-                            WindowConfig::default()
-                                .show_titlebar(false)
-                                .resizable(false)
-                                .transparent(true)
-                                .window_size(Size::new(
-                                    dropdown_width,
-                                    25.0 * self.list.slice().len().min(8) as f64 + 2.0,
-                                ))
-                                .set_position(ctx.to_window(Point::new(0.0, height - 1.0)))
-                                .set_level(WindowLevel::DropDown(ctx.window().clone())),
-                            drop_down(&self.list).lens(Identity.map(
-                                {
-                                    let list = self.list.clone();
-                                    move |row: &String| {
-                                        list.slice()
-                                            .iter()
-                                            .position(|l| l.as_str() == row)
-                                            .unwrap_or(list.slice().len())
-                                    }
-                                },
-                                {
-                                    let list = self.list.clone();
-                                    move |row: &mut String, index: usize| {
-                                        if let Some(element) = list.slice().get(index) {
-                                            row.clear();
-                                            row.push_str(element.as_str());
+                        self.open_window = Some(
+                            ctx.new_sub_window(
+                                WindowConfig::default()
+                                    .show_titlebar(false)
+                                    .resizable(false)
+                                    .transparent(true)
+                                    .window_size(Size::new(
+                                        dropdown_width,
+                                        25.0 * self.list.slice().len().min(8) as f64 + 2.0,
+                                    ))
+                                    .set_position(ctx.to_window(Point::new(0.0, height - 1.0)))
+                                    .set_level(WindowLevel::DropDown(ctx.window().clone())),
+                                drop_down(&self.list).lens(Identity.map(
+                                    {
+                                        let list = self.list.clone();
+                                        move |row: &String| {
+                                            list.slice()
+                                                .iter()
+                                                .position(|l| l.as_str() == row)
+                                                .unwrap_or(list.slice().len())
                                         }
-                                    }
-                                },
-                            )),
-                            data.clone(),
-                            env.clone(),
-                        ));
+                                    },
+                                    {
+                                        let list = self.list.clone();
+                                        move |row: &mut String, index: usize| {
+                                            if let Some(element) = list.slice().get(index) {
+                                                row.clear();
+                                                row.push_str(element.as_str());
+                                            }
+                                        }
+                                    },
+                                )),
+                                data.clone(),
+                                env.clone(),
+                            ),
+                        );
                     }
                 }
             }

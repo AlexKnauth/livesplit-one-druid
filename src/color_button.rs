@@ -714,13 +714,7 @@ impl Widget<ColorState> for ColorButtonPod {
         self.0.lifecycle(ctx, event, data, env)
     }
 
-    fn update(
-        &mut self,
-        ctx: &mut UpdateCtx,
-        old_data: &ColorState,
-        data: &ColorState,
-        env: &Env,
-    ) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &ColorState, data: &ColorState, env: &Env) {
         if !old_data.same(data) {
             ctx.request_paint();
         }
@@ -759,21 +753,23 @@ impl Widget<ColorState> for ColorButton {
                     } else {
                         // Close any other open color picker first
                         ctx.submit_command(CLOSE_COLOR_PICKER.to(Target::Global));
-                        self.open_window = Some(ctx.new_sub_window(
-                            WindowConfig::default()
-                                .show_titlebar(false)
-                                .resizable(false)
-                                .transparent(true)
-                                .window_size(Size::new(225., 355.))
-                                .set_position(ctx.to_window(Point::new(
-                                    ctx.size().width / 2.0 - 225.0 / 2.0,
-                                    ctx.size().height * 2.0,
-                                )))
-                                .set_level(WindowLevel::DropDown(ctx.window().clone())),
-                            color_picker(ctx.window_id()),
-                            *data,
-                            env.clone(),
-                        ));
+                        self.open_window = Some(
+                            ctx.new_sub_window(
+                                WindowConfig::default()
+                                    .show_titlebar(false)
+                                    .resizable(false)
+                                    .transparent(true)
+                                    .window_size(Size::new(225., 355.))
+                                    .set_position(ctx.to_window(Point::new(
+                                        ctx.size().width / 2.0 - 225.0 / 2.0,
+                                        ctx.size().height * 2.0,
+                                    )))
+                                    .set_level(WindowLevel::DropDown(ctx.window().clone())),
+                                color_picker(ctx.window_id()),
+                                *data,
+                                env.clone(),
+                            ),
+                        );
                         self.just_opened = true;
                     }
                     ctx.request_paint();

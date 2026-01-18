@@ -558,16 +558,12 @@ fn setting_row_widget() -> impl Widget<SettingRow> {
                 Box::new(
                     Flex::row()
                         .with_flex_child(
-                            Flex::row()
-                                .with_spacer(indent)
-                                .with_flex_child(
-                                    Label::new(|row: &SettingRow, _: &Env| {
-                                        row.description.to_string()
-                                    })
+                            Flex::row().with_spacer(indent).with_flex_child(
+                                Label::new(|row: &SettingRow, _: &Env| row.description.to_string())
                                     .with_line_break_mode(druid::widget::LineBreaking::WordWrap)
                                     .controller(RowTooltipController::new()),
-                                    1.0,
-                                ),
+                                1.0,
+                            ),
                             1.0,
                         )
                         .with_flex_child(setting_value_widget().expand_width(), 1.0)
