@@ -600,11 +600,12 @@ fn default_run() -> Run {
 pub fn show_error(error: anyhow::Error) {
     // this MessageDialog is for displaying errors,
     // so I guess it's fine if it crashes? if it was going to crash anyway?
-    let _ = native_dialog::MessageDialog::new()
-        .set_type(native_dialog::MessageType::Error)
+    let _ = native_dialog::DialogBuilder::message()
+        .set_level(native_dialog::MessageLevel::Error)
         .set_title("Error")
         .set_text(&format!("{error:?}"))
-        .show_alert();
+        .alert()
+        .show();
 }
 
 pub fn or_show_error(result: Result<()>) {
