@@ -723,7 +723,7 @@ fn show_file_dialog(
 
     let ext_refs: Vec<&str> = all_extensions.iter().map(|s| s.as_str()).collect();
 
-    let mut dialog = native_dialog::FileDialog::new();
+    let mut dialog = native_dialog::DialogBuilder::file();
 
     // Add a single filter with all extensions combined
     if !ext_refs.is_empty() {
@@ -737,7 +737,7 @@ fn show_file_dialog(
         }
     }
 
-    dialog.show_open_single_file().ok().flatten()
+    dialog.open_single_file().show().ok().flatten()
 }
 
 #[derive(Clone)]
