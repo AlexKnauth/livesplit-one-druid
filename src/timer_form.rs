@@ -11,10 +11,6 @@ use druid::{
     UpdateCtx, Widget, WidgetExt, WindowDesc, WindowId, WindowLevel,
 };
 use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
-/*
-#[cfg(not(target_os = "macos"))]
-use native_dialog::MessageType;
-*/
 
 #[cfg(feature = "auto-splitting")]
 use crate::{autosplitter_editor, AutoSplitterEditorLens};
@@ -1070,19 +1066,15 @@ pub fn launch(state: MainState, window: WindowDesc<MainState>) {
 }
 
 fn message_dialog_confirm(_title: &str, _text: &str) -> native_dialog::Result<bool> {
-    /*
     // TODO: fix this MessageDialog so that it doesn't cause crashes on Mac
     #[cfg(not(target_os = "macos"))]
-    */
     return native_dialog::DialogBuilder::message()
         .set_title(_title)
         .set_text(_text)
         .set_level(native_dialog::MessageLevel::Warning)
         .confirm()
         .show();
-    /*
     // since the MessageDialog isn't working on Mac, assume Yes for now
     #[cfg(target_os = "macos")]
     return Ok(true);
-    */
 }
