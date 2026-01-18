@@ -14,6 +14,8 @@ use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
 #[cfg(not(target_os = "macos"))]
 use native_dialog::MessageType;
 
+#[cfg(feature = "auto-splitting")]
+use crate::{autosplitter_editor, AutoSplitterEditorLens};
 use crate::{
     config::or_show_error,
     consts::{
@@ -116,6 +118,9 @@ const CONTEXT_MENU_SET_TIMING_METHOD: Selector<TimingMethod> =
 const CONTEXT_MENU_EDIT_WINDOW_SETTINGS: Selector =
     Selector::new("context-menu-edit-window-settings");
 const CONTEXT_MENU_EDIT_HOTKEYS: Selector = Selector::new("context-menu-edit-hotkeys");
+#[cfg(feature = "auto-splitting")]
+const CONTEXT_MENU_EDIT_AUTOSPLITTER_SETTINGS: Selector =
+    Selector::new("context-menu-edit-autosplitter-settings");
 
 impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut MainState, env: &Env) {
@@ -132,11 +137,17 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                 }
             }
             Event::MouseUp(event) => {
+                #[cfg(feature = "auto-splitting")]
+                let autosplitter_editor_is_none = data.autosplitter_editor.is_none();
+                #[cfg(not(feature = "auto-splitting"))]
+                let autosplitter_editor_is_none = true;
+
                 if (event.button.is_right() || (event.button.is_left() && event.mods.ctrl()))
                     && data.run_editor.is_none()
                     && data.layout_editor.is_none()
                     && data.window_settings_editor.is_none()
                     && data.hotkeys_editor.is_none()
+                    && autosplitter_editor_is_none
                 {
                     let mut compare_against = Menu::new("Compare Against");
 
@@ -311,6 +322,13 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                 MenuItem::new("Open Auto-splitter...").command(
                                     CONTEXT_MENU_SET_INTENT.with(Intent::OPEN_AUTO_SPLITTER),
                                 ),
+                            )
+                            .entry(
+                                #[cfg(feature = "auto-splitting")]
+                                MenuItem::new("Edit Auto-splitter Settings...")
+                                    .command(CONTEXT_MENU_EDIT_AUTOSPLITTER_SETTINGS),
+                                #[cfg(not(feature = "auto-splitting"))]
+                                MenuItem::new("Auto-splitter settings unavailable").enabled(false),
                             )
                             .separator()
                             .entry(control_menu)
@@ -498,7 +516,25 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         id: window_id,
                         state: hotkeys_editor::State::new(config),
                     });
-                } else if let Some(intent) = command.get(CONTEXT_MENU_SET_INTENT) {
+                }
+                #[cfg(feature = "auto-splitting")]
+                if command.is(CONTEXT_MENU_EDIT_AUTOSPLITTER_SETTINGS) {
+                    let window = WindowDesc::new(
+                        autosplitter_editor::root_widget().lens(AutoSplitterEditorLens),
+                    )
+                    .title("Auto-splitter Settings")
+                    .with_min_size((550.0, 400.0))
+                    .window_size((550.0, 450.0))
+                    .set_level(WindowLevel::AppWindow)
+                    .set_always_on_top(true);
+                    let window_id = window.id;
+                    ctx.new_window(window);
+                    data.autosplitter_editor = Some(OpenWindow {
+                        id: window_id,
+                        state: autosplitter_editor::State::new(data.auto_splitter.clone()),
+                    });
+                }
+                if let Some(intent) = command.get(CONTEXT_MENU_SET_INTENT) {
                     self.intent = *intent;
                 } else if let Some((intent, path)) = command.get(CONTEXT_MENU_SET_INTENT_WITH_PATH)
                 {
@@ -990,6 +1026,17 @@ impl AppDelegate<MainState> for WindowManagement {
                         .set_mouse_pass_through_while_running(mouse_pass_through_while_running);
                 }
                 data.window_settings_editor = None;
+                return;
+            }
+        }
+
+        #[cfg(feature = "auto-splitting")]
+        if let Some(window) = &data.autosplitter_editor {
+            if id == window.id {
+                if !window.state.closed_with_ok {
+                    window.state.revert_settings();
+                }
+                data.autosplitter_editor = None;
                 return;
             }
         }

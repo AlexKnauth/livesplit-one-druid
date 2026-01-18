@@ -34,6 +34,9 @@ mod settings_table;
 mod timer_form;
 mod window_settings_editor;
 
+#[cfg(feature = "auto-splitting")]
+mod autosplitter_editor;
+
 mod software_renderer;
 // mod piet_renderer;
 
@@ -68,6 +71,8 @@ pub struct MainState {
     layout_editor: Option<OpenWindow<layout_editor::State>>,
     window_settings_editor: Option<OpenWindow<window_settings_editor::State>>,
     hotkeys_editor: Option<OpenWindow<hotkeys_editor::State>>,
+    #[cfg(feature = "auto-splitting")]
+    autosplitter_editor: Option<OpenWindow<autosplitter_editor::State>>,
     image_cache: Rc<RefCell<ImageCache>>,
     mouse_pass_through: bool,
 }
@@ -123,6 +128,8 @@ impl MainState {
             layout_editor: None,
             window_settings_editor: None,
             hotkeys_editor: None,
+            #[cfg(feature = "auto-splitting")]
+            autosplitter_editor: None,
             image_cache: Rc::new(RefCell::new(ImageCache::new())),
             mouse_pass_through: false,
         }
@@ -186,6 +193,24 @@ impl Lens<MainState, hotkeys_editor::State> for HotkeysEditorLens {
         f: F,
     ) -> V {
         f(&mut data.hotkeys_editor.as_mut().unwrap().state)
+    }
+}
+
+#[cfg(feature = "auto-splitting")]
+struct AutoSplitterEditorLens;
+
+#[cfg(feature = "auto-splitting")]
+impl Lens<MainState, autosplitter_editor::State> for AutoSplitterEditorLens {
+    fn with<V, F: FnOnce(&autosplitter_editor::State) -> V>(&self, data: &MainState, f: F) -> V {
+        f(&data.autosplitter_editor.as_ref().unwrap().state)
+    }
+
+    fn with_mut<V, F: FnOnce(&mut autosplitter_editor::State) -> V>(
+        &self,
+        data: &mut MainState,
+        f: F,
+    ) -> V {
+        f(&mut data.autosplitter_editor.as_mut().unwrap().state)
     }
 }
 

@@ -1,12 +1,36 @@
+use std::cell::Cell;
+use std::rc::Rc;
+
 use druid::{
     commands::CLOSE_WINDOW,
     kurbo::BezPath,
     lens::Identity,
+    piet::{PietText, Text, TextLayout, TextLayoutBuilder},
     theme,
     widget::{Button, Controller, Flex, Label, LabelText, Painter, Scroll, TextBox},
     BoxConstraints, Color, Env, Event, EventCtx, LayoutCtx, LensExt, LifeCycle, LifeCycleCtx,
-    PaintCtx, Point, RenderContext, Size, UpdateCtx, Widget, WidgetExt, WindowConfig, WindowLevel,
+    PaintCtx, Point, RenderContext, Selector, Size, Target, UpdateCtx, Widget, WidgetExt,
+    WindowConfig, WindowId, WindowLevel,
 };
+
+fn max_text_width(list: &impl ComboList, text: &mut PietText, env: &Env) -> f64 {
+    let font = env.get(theme::UI_FONT);
+    let mut max_width = 0.0;
+    for item in list.slice() {
+        if let Ok(layout) = text
+            .new_text_layout(item.as_str().to_string())
+            .font(font.family.clone(), font.size)
+            .build()
+        {
+            if layout.size().width > max_width {
+                max_width = layout.size().width;
+            }
+        }
+    }
+    max_width
+}
+
+const DROPDOWN_CLOSED: Selector<()> = Selector::new("combo-box.dropdown-closed");
 
 struct CloseOnFocusLoss;
 
@@ -41,8 +65,9 @@ impl<T, W: Widget<T>> Widget<T> for ComboBox<W> {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &T, env: &Env) {
-        self.0.paint(ctx, data, env);
         let Size { width, height } = ctx.size();
+        ctx.clip(Size { width, height }.to_rect());
+        self.0.paint(ctx, data, env);
         let l_x = width - 24.0 + 7.0;
         let t_y = 0.5 * height - 2.0;
         let r_x = width - 7.0;
@@ -144,53 +169,68 @@ impl<W: Widget<String>> Widget<String> for Pod<W> {
 struct OnClick<W, L> {
     widget: W,
     list: L,
+    open_window: Option<WindowId>,
 }
+
 impl<W: Widget<String>, L: ComboList> Widget<String> for OnClick<W, L> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut String, env: &Env) {
         let Size { width, height } = ctx.size();
         match event {
             Event::MouseDown(event) => {
                 if event.button == druid::MouseButton::Left && event.pos.x >= width - 24.0 {
-                    ctx.new_sub_window(
-                        WindowConfig::default()
-                            .show_titlebar(false)
-                            .resizable(false)
-                            .transparent(true)
-                            .window_size(Size::new(
-                                width,
-                                25.0 * self.list.slice().len().min(8) as f64 + 2.0,
-                            ))
-                            .set_position(ctx.to_window(Point::new(0.0, height - 1.0)))
-                            .set_level(WindowLevel::DropDown(ctx.window().clone())),
-                        drop_down(&self.list).lens(Identity.map(
-                            {
-                                let list = self.list.clone();
-                                move |row: &String| {
-                                    list.slice()
-                                        .iter()
-                                        .position(|l| l.as_str() == row)
-                                        .unwrap_or(list.slice().len())
-                                }
-                            },
-                            {
-                                let list = self.list.clone();
-                                move |row: &mut String, index: usize| {
-                                    if let Some(element) = list.slice().get(index) {
-                                        row.clear();
-                                        row.push_str(element.as_str());
-                                    }
-                                }
-                            },
-                        )),
-                        data.clone(),
-                        env.clone(),
-                    );
+                    if let Some(window_id) = self.open_window.take() {
+                        ctx.submit_command(CLOSE_WINDOW.to(Target::Window(window_id)));
+                    } else {
+                        let text_width = max_text_width(&self.list, &mut ctx.text(), env);
+                        let dropdown_width = (text_width + 14.0).max(width);
+                        self.open_window = Some(
+                            ctx.new_sub_window(
+                                WindowConfig::default()
+                                    .show_titlebar(false)
+                                    .resizable(false)
+                                    .transparent(true)
+                                    .window_size(Size::new(
+                                        dropdown_width,
+                                        25.0 * self.list.slice().len().min(8) as f64 + 2.0,
+                                    ))
+                                    .set_position(ctx.to_window(Point::new(0.0, height - 1.0)))
+                                    .set_level(WindowLevel::DropDown(ctx.window().clone())),
+                                drop_down(&self.list).lens(Identity.map(
+                                    {
+                                        let list = self.list.clone();
+                                        move |row: &String| {
+                                            list.slice()
+                                                .iter()
+                                                .position(|l| l.as_str() == row)
+                                                .unwrap_or(list.slice().len())
+                                        }
+                                    },
+                                    {
+                                        let list = self.list.clone();
+                                        move |row: &mut String, index: usize| {
+                                            if let Some(element) = list.slice().get(index) {
+                                                row.clear();
+                                                row.push_str(element.as_str());
+                                            }
+                                        }
+                                    },
+                                )),
+                                data.clone(),
+                                env.clone(),
+                            ),
+                        );
+                    }
                 }
             }
             Event::MouseMove(event) => {
                 if event.pos.x >= width - 24.0 {
                     ctx.set_cursor(&druid::Cursor::Arrow);
                     return;
+                }
+            }
+            Event::Command(cmd) => {
+                if cmd.is(DROPDOWN_CLOSED) {
+                    self.open_window = None;
                 }
             }
             _ => {}
@@ -225,6 +265,7 @@ pub fn custom_user_string(list: impl ComboList) -> impl Widget<String> {
     Pod(druid::WidgetPod::new(ComboBox(OnClick {
         widget: TextBox::new(),
         list,
+        open_window: None,
     })))
 }
 
@@ -232,20 +273,70 @@ pub fn static_list(list: &'static [&'static str]) -> impl Widget<usize> {
     dynamic_list(list)
 }
 
+struct DropdownToggleController {
+    open_window: Rc<Cell<Option<WindowId>>>,
+}
+
+impl<W: Widget<usize>> Controller<usize, W> for DropdownToggleController {
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut usize,
+        env: &Env,
+    ) {
+        // Intercept MouseDown to close dropdown if one is open
+        if let Event::MouseDown(mouse) = event {
+            if mouse.button == druid::MouseButton::Left {
+                if let Some(window_id) = self.open_window.take() {
+                    ctx.submit_command(CLOSE_WINDOW.to(Target::Window(window_id)));
+                    return; // Don't let button process this click
+                }
+            }
+        }
+        // Clear open_window when dropdown closes (even if same option selected)
+        if let Event::Command(cmd) = event {
+            if cmd.is(DROPDOWN_CLOSED) {
+                self.open_window.set(None);
+            }
+        }
+        child.event(ctx, event, data, env);
+    }
+
+    fn update(
+        &mut self,
+        child: &mut W,
+        ctx: &mut UpdateCtx,
+        old_data: &usize,
+        data: &usize,
+        env: &Env,
+    ) {
+        if old_data != data {
+            self.open_window.set(None);
+        }
+        child.update(ctx, old_data, data, env)
+    }
+}
+
 pub fn dynamic_list(list: impl ComboList) -> impl Widget<usize> {
+    let open_window: Rc<Cell<Option<WindowId>>> = Rc::new(Cell::new(None));
+    let open_window_clone = open_window.clone();
     ComboBox(
         Button::new({
             let list = list.clone();
             move |&index: &usize, _: &_| list.slice()[index].to_arc_str()
         })
         .on_click(move |ctx, &mut index: &mut usize, env| {
-            ctx.new_sub_window(
+            let text_width = max_text_width(&list, &mut ctx.text(), env);
+            let dropdown_width = (text_width + 14.0).max(ctx.size().width);
+            let window_id = ctx.new_sub_window(
                 WindowConfig::default()
                     .show_titlebar(false)
                     .resizable(false)
                     .transparent(true)
                     .window_size(Size::new(
-                        ctx.size().width,
+                        dropdown_width,
                         25.0 * list.slice().len().min(8) as f64 + 2.0,
                     ))
                     .set_position(ctx.to_window(Point::new(0.0, ctx.size().height - 1.0)))
@@ -254,12 +345,14 @@ pub fn dynamic_list(list: impl ComboList) -> impl Widget<usize> {
                 index,
                 env.clone(),
             );
+            open_window_clone.set(Some(window_id));
         })
         .env_scope(|env, _| {
             env.set(theme::BUTTON_BORDER_RADIUS, 0.0);
             env.set(theme::BUTTON_LIGHT, Color::grey8(0x10));
             env.set(theme::BUTTON_DARK, Color::grey8(0x10));
-        }),
+        })
+        .controller(DropdownToggleController { open_window }),
     )
 }
 
@@ -281,6 +374,7 @@ fn drop_down(list: &impl ComboList) -> impl Widget<usize> {
             }))
             .on_click(move |ctx, selected_index, _env| {
                 *selected_index = index;
+                ctx.submit_command(DROPDOWN_CLOSED.to(Target::Global));
                 ctx.submit_command(CLOSE_WINDOW);
             });
         flex.add_child(label);

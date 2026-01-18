@@ -1,13 +1,18 @@
 use druid::{
+    commands::CLOSE_WINDOW,
     kurbo::{Circle, Line, PathEl},
     lens::Unit,
     piet::{Image, ImageFormat, InterpolationMode, PietImage},
     theme,
     widget::{Controller, Flex, Label, Painter, Slider, TextBox},
     BoxConstraints, Color, Cursor, Data, Env, Event, EventCtx, LayoutCtx, Lens, LifeCycle,
-    LifeCycleCtx, LinearGradient, MouseButton, PaintCtx, Point, RenderContext, Size, TextAlignment,
-    UnitPoint, UpdateCtx, Vec2, Widget, WidgetExt, WidgetPod, WindowConfig, WindowLevel,
+    LifeCycleCtx, LinearGradient, MouseButton, PaintCtx, Point, RenderContext, Selector, Size,
+    Target, TextAlignment, UnitPoint, UpdateCtx, Widget, WidgetExt, WidgetPod, WindowConfig,
+    WindowId, WindowLevel,
 };
+
+const COLOR_CHANGED: Selector<()> = Selector::new("color-button.color-changed");
+const CLOSE_COLOR_PICKER: Selector<()> = Selector::new("color-button.close-color-picker");
 use image::{ImageBuffer, RgbaImage};
 
 use std::fmt::Write;
@@ -165,6 +170,20 @@ impl<W: Widget<ColorState>> Controller<ColorState, W> for PickerController {
             _ => {}
         }
         child.event(ctx, event, data, env)
+    }
+
+    fn update(
+        &mut self,
+        child: &mut W,
+        ctx: &mut UpdateCtx,
+        old_data: &ColorState,
+        data: &ColorState,
+        env: &Env,
+    ) {
+        if !old_data.same(data) {
+            ctx.request_paint();
+        }
+        child.update(ctx, old_data, data, env)
     }
 }
 
@@ -642,7 +661,25 @@ fn arrow() -> impl Widget<()> {
     .fix_height(8.0)
 }
 
-fn color_picker() -> impl Widget<ColorState> {
+struct NotifyParentController(WindowId);
+
+impl<W: Widget<ColorState>> Controller<ColorState, W> for NotifyParentController {
+    fn update(
+        &mut self,
+        child: &mut W,
+        ctx: &mut UpdateCtx,
+        old_data: &ColorState,
+        data: &ColorState,
+        env: &Env,
+    ) {
+        if !old_data.same(data) {
+            ctx.submit_command(COLOR_CHANGED.to(Target::Window(self.0)));
+        }
+        child.update(ctx, old_data, data, env)
+    }
+}
+
+fn color_picker(parent_window: WindowId) -> impl Widget<ColorState> {
     Flex::column()
         .with_child(arrow().lens(Unit))
         .with_flex_child(picker(), 1.0)
@@ -650,37 +687,16 @@ fn color_picker() -> impl Widget<ColorState> {
         .with_child(separator().lens(Unit))
         .with_child(palette())
         .border(Color::grey8(0x50), 1.0)
-        .controller(CloseOnFocusLoss)
-}
-
-struct CloseOnFocusLoss;
-
-impl<T, W: Widget<T>> Controller<T, W> for CloseOnFocusLoss {
-    fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut T, env: &Env) {
-        /*
-        if let Event::WindowLostFocus = event {
-            ctx.submit_command(CLOSE_WINDOW);
-        }
-        */
-        child.event(ctx, event, data, env)
-    }
-
-    fn lifecycle(
-        &mut self,
-        child: &mut W,
-        ctx: &mut LifeCycleCtx,
-        event: &LifeCycle,
-        data: &T,
-        env: &Env,
-    ) {
-        child.lifecycle(ctx, event, data, env)
-    }
+        .controller(NotifyParentController(parent_window))
 }
 
 struct ColorButtonPod(WidgetPod<ColorState, ColorButton>);
 
 pub fn widget() -> impl Widget<ColorState> {
-    ColorButtonPod(WidgetPod::new(ColorButton))
+    ColorButtonPod(WidgetPod::new(ColorButton {
+        open_window: None,
+        just_opened: false,
+    }))
 }
 
 impl Widget<ColorState> for ColorButtonPod {
@@ -698,13 +714,10 @@ impl Widget<ColorState> for ColorButtonPod {
         self.0.lifecycle(ctx, event, data, env)
     }
 
-    fn update(
-        &mut self,
-        ctx: &mut UpdateCtx,
-        _old_data: &ColorState,
-        data: &ColorState,
-        env: &Env,
-    ) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &ColorState, data: &ColorState, env: &Env) {
+        if !old_data.same(data) {
+            ctx.request_paint();
+        }
         self.0.update(ctx, data, env)
     }
 
@@ -725,36 +738,39 @@ impl Widget<ColorState> for ColorButtonPod {
     }
 }
 
-struct ColorButton;
+struct ColorButton {
+    open_window: Option<WindowId>,
+    just_opened: bool,
+}
 
 impl Widget<ColorState> for ColorButton {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut ColorState, env: &Env) {
         match event {
             Event::MouseDown(mouse_event) => {
                 if mouse_event.button == MouseButton::Left && !ctx.is_disabled() {
-                    ctx.set_active(true);
-                    ctx.request_paint();
-                }
-            }
-            Event::MouseUp(mouse_event) => {
-                if ctx.is_active() && mouse_event.button == MouseButton::Left {
-                    ctx.set_active(false);
-                    if ctx.is_hot() && !ctx.is_disabled() {
-                        ctx.new_sub_window(
-                            WindowConfig::default()
-                                .show_titlebar(false)
-                                .resizable(false)
-                                .transparent(true)
-                                .window_size(Size::new(225., 355.))
-                                .set_position(ctx.to_window(
-                                    ctx.size().to_rect().center()
-                                        + Vec2::new(-0.5 * 225.0, 0.5 * ctx.size().height),
-                                ))
-                                .set_level(WindowLevel::DropDown(ctx.window().clone())),
-                            color_picker(),
-                            *data,
-                            env.clone(),
+                    if let Some(window_id) = self.open_window.take() {
+                        ctx.submit_command(CLOSE_WINDOW.to(Target::Window(window_id)));
+                    } else {
+                        // Close any other open color picker first
+                        ctx.submit_command(CLOSE_COLOR_PICKER.to(Target::Global));
+                        self.open_window = Some(
+                            ctx.new_sub_window(
+                                WindowConfig::default()
+                                    .show_titlebar(false)
+                                    .resizable(false)
+                                    .transparent(true)
+                                    .window_size(Size::new(225., 355.))
+                                    .set_position(ctx.to_window(Point::new(
+                                        ctx.size().width / 2.0 - 225.0 / 2.0,
+                                        ctx.size().height * 2.0,
+                                    )))
+                                    .set_level(WindowLevel::DropDown(ctx.window().clone())),
+                                color_picker(ctx.window_id()),
+                                *data,
+                                env.clone(),
+                            ),
                         );
+                        self.just_opened = true;
                     }
                     ctx.request_paint();
                 }
@@ -765,6 +781,17 @@ impl Widget<ColorState> for ColorButton {
                 } else {
                     ctx.set_disabled(false);
                     ctx.clear_cursor();
+                }
+            }
+            Event::Command(cmd) if cmd.is(COLOR_CHANGED) => {
+                ctx.request_paint();
+            }
+            Event::Command(cmd) if cmd.is(CLOSE_COLOR_PICKER) => {
+                // Don't close if we just opened (we sent this command)
+                if self.just_opened {
+                    self.just_opened = false;
+                } else if let Some(window_id) = self.open_window.take() {
+                    ctx.submit_command(CLOSE_WINDOW.to(Target::Window(window_id)));
                 }
             }
             _ => {}
