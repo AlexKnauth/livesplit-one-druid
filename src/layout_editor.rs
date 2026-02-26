@@ -36,7 +36,8 @@ pub struct State {
 
 impl State {
     pub fn new(editor: LayoutEditor, image_cache: Rc<RefCell<ImageCache>>) -> Self {
-        let state = Rc::new(editor.state(&mut image_cache.borrow_mut(), livesplit_core::Lang::English));
+        let state =
+            Rc::new(editor.state(&mut image_cache.borrow_mut(), livesplit_core::Lang::English));
         Self {
             state,
             editor: Rc::new(RefCell::new(Some(editor))),
@@ -50,7 +51,10 @@ impl State {
         let mut editor = self.editor.borrow_mut();
         let editor = editor.as_mut().unwrap();
         f(editor);
-        self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut(), livesplit_core::Lang::English));
+        self.state = Rc::new(editor.state(
+            &mut self.image_cache.borrow_mut(),
+            livesplit_core::Lang::English,
+        ));
         self.image_cache.borrow_mut().collect();
     }
 }
@@ -114,7 +118,10 @@ impl ListIter<SettingsRow> for State {
         }
 
         if changed {
-            self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut(), livesplit_core::Lang::English));
+            self.state = Rc::new(editor.state(
+                &mut self.image_cache.borrow_mut(),
+                livesplit_core::Lang::English,
+            ));
         }
         self.image_cache.borrow_mut().collect();
     }
@@ -168,7 +175,10 @@ impl ListIter<ComponentRow> for State {
         }
 
         if changed {
-            self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut(), livesplit_core::Lang::English));
+            self.state = Rc::new(editor.state(
+                &mut self.image_cache.borrow_mut(),
+                livesplit_core::Lang::English,
+            ));
         }
         self.image_cache.borrow_mut().collect();
     }
@@ -279,7 +289,9 @@ impl<T: Widget<State>> Widget<State> for AddComponentWidget<T> {
             } else if command.is(ADD_COMPONENT_SEGMENT_TIME) {
                 data.mutate(|editor| editor.add_component(component::SegmentTime::new()));
             } else if command.is(ADD_COMPONENT_SPLITS) {
-                data.mutate(|editor| editor.add_component(component::Splits::new(livesplit_core::Lang::English)));
+                data.mutate(|editor| {
+                    editor.add_component(component::Splits::new(livesplit_core::Lang::English))
+                });
             } else if command.is(ADD_COMPONENT_SUM_OF_BEST_SEGMENTS) {
                 data.mutate(|editor| editor.add_component(component::SumOfBest::new()));
             } else if command.is(ADD_COMPONENT_TEXT) {

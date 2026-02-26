@@ -132,7 +132,8 @@ impl State {
         config: Rc<RefCell<Config>>,
         image_cache: Rc<RefCell<ImageCache>>,
     ) -> Self {
-        let state = Rc::new(editor.state(&mut image_cache.borrow_mut(), livesplit_core::Lang::English));
+        let state =
+            Rc::new(editor.state(&mut image_cache.borrow_mut(), livesplit_core::Lang::English));
         // let image = image::load_from_memory(state.icon_change.as_deref().unwrap())
         //     .unwrap()
         //     .into_rgba8();
@@ -195,7 +196,10 @@ fn game_name() -> impl Widget<State> {
                         let mut editor = state.editor.borrow_mut();
                         let editor = editor.as_mut().unwrap();
                         editor.set_game_name(name);
-                        state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                        state.state = Rc::new(editor.state(
+                            &mut state.image_cache.borrow_mut(),
+                            livesplit_core::Lang::English,
+                        ));
                         state.image_cache.borrow_mut().collect();
                     },
                 ))
@@ -216,7 +220,10 @@ fn category_name() -> impl Widget<State> {
                         let mut editor = state.editor.borrow_mut();
                         let editor = editor.as_mut().unwrap();
                         editor.set_category_name(name);
-                        state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                        state.state = Rc::new(editor.state(
+                            &mut state.image_cache.borrow_mut(),
+                            livesplit_core::Lang::English,
+                        ));
                         state.image_cache.borrow_mut().collect();
                     },
                 ))
@@ -240,7 +247,10 @@ fn offset() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     let _ = editor.parse_and_set_offset(&value, livesplit_core::Lang::English);
-                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                    state.state = Rc::new(editor.state(
+                        &mut state.image_cache.borrow_mut(),
+                        livesplit_core::Lang::English,
+                    ));
                     state.image_cache.borrow_mut().collect();
                 },
             ))
@@ -268,7 +278,10 @@ fn attempts() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.set_attempt_count(value);
-                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                    state.state = Rc::new(editor.state(
+                        &mut state.image_cache.borrow_mut(),
+                        livesplit_core::Lang::English,
+                    ));
                     state.image_cache.borrow_mut().collect();
                 },
             ))
@@ -301,7 +314,10 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.insert_segment_above();
-                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                    state.state = Rc::new(editor.state(
+                        &mut state.image_cache.borrow_mut(),
+                        livesplit_core::Lang::English,
+                    ));
                     state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
@@ -314,7 +330,10 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.insert_segment_below();
-                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                    state.state = Rc::new(editor.state(
+                        &mut state.image_cache.borrow_mut(),
+                        livesplit_core::Lang::English,
+                    ));
                     state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
@@ -327,7 +346,10 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.remove_segments();
-                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                    state.state = Rc::new(editor.state(
+                        &mut state.image_cache.borrow_mut(),
+                        livesplit_core::Lang::English,
+                    ));
                     state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
@@ -340,7 +362,10 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.move_segments_up();
-                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                    state.state = Rc::new(editor.state(
+                        &mut state.image_cache.borrow_mut(),
+                        livesplit_core::Lang::English,
+                    ));
                     state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
@@ -353,7 +378,10 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.move_segments_down();
-                    state.state = Rc::new(editor.state(&mut state.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                    state.state = Rc::new(editor.state(
+                        &mut state.image_cache.borrow_mut(),
+                        livesplit_core::Lang::English,
+                    ));
                     state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
@@ -428,9 +456,10 @@ impl ListIter<Segment> for State {
             }
             if let Some(new_best_segment_time) = segment.new_best_segment_time.take() {
                 editor.select_only(index);
-                let _ = editor
-                    .active_segment()
-                    .parse_and_set_best_segment_time(&new_best_segment_time, livesplit_core::Lang::English);
+                let _ = editor.active_segment().parse_and_set_best_segment_time(
+                    &new_best_segment_time,
+                    livesplit_core::Lang::English,
+                );
                 changed = true;
             }
             if segment.select_only {
@@ -456,7 +485,10 @@ impl ListIter<Segment> for State {
         }
 
         if changed {
-            self.state = Rc::new(editor.state(&mut self.image_cache.borrow_mut(), livesplit_core::Lang::English));
+            self.state = Rc::new(editor.state(
+                &mut self.image_cache.borrow_mut(),
+                livesplit_core::Lang::English,
+            ));
         }
         self.image_cache.borrow_mut().collect();
     }
@@ -611,8 +643,10 @@ fn tabs() -> impl Widget<State> {
                             let mut editor = state.editor.borrow_mut();
                             let editor = editor.as_mut().unwrap();
                             editor.select_timing_method(TimingMethod::RealTime);
-                            state.state =
-                                Rc::new(editor.state(&mut state.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                            state.state = Rc::new(editor.state(
+                                &mut state.image_cache.borrow_mut(),
+                                livesplit_core::Lang::English,
+                            ));
                             state.image_cache.borrow_mut().collect();
                         })
                         .env_scope(|env, data: &State| {
@@ -628,8 +662,10 @@ fn tabs() -> impl Widget<State> {
                             let mut editor = state.editor.borrow_mut();
                             let editor = editor.as_mut().unwrap();
                             editor.select_timing_method(TimingMethod::GameTime);
-                            state.state =
-                                Rc::new(editor.state(&mut state.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                            state.state = Rc::new(editor.state(
+                                &mut state.image_cache.borrow_mut(),
+                                livesplit_core::Lang::English,
+                            ));
                             state.image_cache.borrow_mut().collect();
                         })
                         .env_scope(|env, data: &State| {
@@ -849,12 +885,18 @@ impl<T: Widget<State>> Widget<State> for OtherButtonWidget<T> {
                 let mut editor = data.editor.borrow_mut();
                 let editor = editor.as_mut().unwrap();
                 editor.clear_history();
-                data.state = Rc::new(editor.state(&mut data.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                data.state = Rc::new(editor.state(
+                    &mut data.image_cache.borrow_mut(),
+                    livesplit_core::Lang::English,
+                ));
             } else if command.is(CLEAR_TIMES) {
                 let mut editor = data.editor.borrow_mut();
                 let editor = editor.as_mut().unwrap();
                 editor.clear_times();
-                data.state = Rc::new(editor.state(&mut data.image_cache.borrow_mut(), livesplit_core::Lang::English));
+                data.state = Rc::new(editor.state(
+                    &mut data.image_cache.borrow_mut(),
+                    livesplit_core::Lang::English,
+                ));
             }
         }
         data.image_cache.borrow_mut().collect();
