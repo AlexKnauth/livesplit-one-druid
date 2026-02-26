@@ -272,7 +272,7 @@ impl Config {
 
     pub fn parse_layout_or_default(&mut self, timer: &Timer) -> Layout {
         self.parse_layout(timer)
-            .unwrap_or_else(Layout::default_layout)
+            .unwrap_or_else(|| Layout::default_layout(livesplit_core::Lang::English))
     }
 
     pub fn set_window_size(&mut self, (width, height): (f64, f64)) {
@@ -429,7 +429,7 @@ impl Config {
     pub fn new_layout(&mut self, timer: Option<&mut Timer>, layout_data: &mut LayoutData) {
         self.general.can_save_layout = false;
         self.general.layout = None;
-        layout_data.layout = Layout::default_layout();
+        layout_data.layout = Layout::default_layout(livesplit_core::Lang::English);
         layout_data.is_modified = false;
 
         if let Some(timer) = timer {

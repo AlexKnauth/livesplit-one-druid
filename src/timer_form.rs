@@ -789,12 +789,14 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     &mut layout_data.layout_state,
                     &mut data.image_cache.borrow_mut(),
                     &data.timer.read().unwrap().snapshot(),
+                    livesplit_core::Lang::English,
                 );
         } else {
             layout_data.layout.update_state(
                 &mut layout_data.layout_state,
                 &mut data.image_cache.borrow_mut(),
                 &data.timer.read().unwrap().snapshot(),
+                livesplit_core::Lang::English,
             );
         }
 

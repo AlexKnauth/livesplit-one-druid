@@ -342,7 +342,7 @@ pub fn validated(
 
 pub fn optional_time_span(inner: impl Widget<ValidatedString>) -> impl Widget<String> {
     validated(inner, |val: &str| {
-        val.is_empty() || val.parse::<TimeSpan>().is_ok()
+        val.is_empty() || TimeSpan::parse(val, livesplit_core::Lang::English).is_ok()
     })
 }
 

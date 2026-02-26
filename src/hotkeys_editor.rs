@@ -27,7 +27,7 @@ pub struct State {
 impl State {
     pub(crate) fn new(editor: HotkeyConfig) -> Self {
         Self {
-            state: Rc::new(editor.settings_description()),
+            state: Rc::new(editor.settings_description(livesplit_core::Lang::English)),
             editor: Rc::new(RefCell::new(Some(editor))),
             closed_with_ok: false,
         }
@@ -73,7 +73,7 @@ impl ListIter<SettingsRow> for State {
         }
 
         if changed {
-            self.state = Rc::new(editor.settings_description());
+            self.state = Rc::new(editor.settings_description(livesplit_core::Lang::English));
         }
     }
 
