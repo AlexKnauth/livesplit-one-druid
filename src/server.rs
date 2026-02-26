@@ -39,7 +39,9 @@ fn server_main<S: event::CommandSink + event::TimerQuery + Clone + Send + 'stati
                         msg.to_text().unwrap(),
                         &command_sink,
                     ));
-                    websocket.send(r.into()).unwrap();
+                    if !r.is_empty() {
+                        websocket.send(r.into()).unwrap();
+                    }
                 }
             }
         });
