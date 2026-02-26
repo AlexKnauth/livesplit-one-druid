@@ -30,6 +30,8 @@ mod hotkeys_editor;
 mod layout_editor;
 mod map_scope;
 mod run_editor;
+mod server;
+mod server_editor;
 mod settings_table;
 mod timer_form;
 mod window_settings_editor;
@@ -73,6 +75,7 @@ pub struct MainState {
     hotkeys_editor: Option<OpenWindow<hotkeys_editor::State>>,
     #[cfg(feature = "auto-splitting")]
     autosplitter_editor: Option<OpenWindow<autosplitter_editor::State>>,
+    server_editor: Option<OpenWindow<server_editor::State>>,
     image_cache: Rc<RefCell<ImageCache>>,
     mouse_pass_through: bool,
 }
@@ -114,6 +117,8 @@ impl MainState {
         #[cfg(feature = "auto-splitting")]
         config.maybe_load_auto_splitter(&auto_splitter, timer.clone());
 
+        config.maybe_start_server(timer.clone());
+
         Self {
             timer,
             #[cfg(feature = "auto-splitting")]
@@ -130,6 +135,7 @@ impl MainState {
             hotkeys_editor: None,
             #[cfg(feature = "auto-splitting")]
             autosplitter_editor: None,
+            server_editor: None,
             image_cache: Rc::new(RefCell::new(ImageCache::new())),
             mouse_pass_through: false,
         }
@@ -211,6 +217,22 @@ impl Lens<MainState, autosplitter_editor::State> for AutoSplitterEditorLens {
         f: F,
     ) -> V {
         f(&mut data.autosplitter_editor.as_mut().unwrap().state)
+    }
+}
+
+struct ServerEditorLens;
+
+impl Lens<MainState, server_editor::State> for ServerEditorLens {
+    fn with<V, F: FnOnce(&server_editor::State) -> V>(&self, data: &MainState, f: F) -> V {
+        f(&data.server_editor.as_ref().unwrap().state)
+    }
+
+    fn with_mut<V, F: FnOnce(&mut server_editor::State) -> V>(
+        &self,
+        data: &mut MainState,
+        f: F,
+    ) -> V {
+        f(&mut data.server_editor.as_mut().unwrap().state)
     }
 }
 

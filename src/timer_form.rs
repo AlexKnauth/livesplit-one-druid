@@ -20,9 +20,9 @@ use crate::{
         BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP, PRIMARY_LIGHT,
         SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
     },
-    hotkeys_editor, layout_editor, run_editor, software_renderer,
+    hotkeys_editor, layout_editor, run_editor, server_editor, software_renderer,
     window_settings_editor::{self, WindowSettings},
-    HotkeysEditorLens, LayoutEditorLens, MainState, OpenWindow, RunEditorLens,
+    HotkeysEditorLens, LayoutEditorLens, MainState, OpenWindow, RunEditorLens, ServerEditorLens,
     WindowSettingsEditorLens, HOTKEY_SYSTEM,
 };
 
@@ -119,6 +119,7 @@ const CONTEXT_MENU_EDIT_HOTKEYS: Selector = Selector::new("context-menu-edit-hot
 #[cfg(feature = "auto-splitting")]
 const CONTEXT_MENU_EDIT_AUTOSPLITTER_SETTINGS: Selector =
     Selector::new("context-menu-edit-autosplitter-settings");
+const CONTEXT_MENU_EDIT_SERVER: Selector = Selector::new("context-menu-edit-server");
 
 impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut MainState, env: &Env) {
@@ -146,6 +147,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     && data.window_settings_editor.is_none()
                     && data.hotkeys_editor.is_none()
                     && autosplitter_editor_is_none
+                    && data.server_editor.is_none()
                 {
                     let mut compare_against = Menu::new("Compare Against");
 
@@ -337,6 +339,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                     .command(CONTEXT_MENU_EDIT_WINDOW_SETTINGS),
                             )
                             .entry(MenuItem::new("Hotkeys").command(CONTEXT_MENU_EDIT_HOTKEYS))
+                            .entry(MenuItem::new("Server").command(CONTEXT_MENU_EDIT_SERVER))
                             .separator()
                             .entry(
                                 MenuItem::new("Exit").command(
@@ -501,7 +504,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         .deactivate();
                     let window =
                         WindowDesc::new(hotkeys_editor::root_widget().lens(HotkeysEditorLens))
-                            .title("Settings")
+                            .title("Hotkeys")
                             .with_min_size((550.0, 400.0))
                             .window_size((550.0, 450.0))
                             // TODO: WindowLevel::Modal(ctx.window().clone())
@@ -513,6 +516,21 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     data.hotkeys_editor = Some(OpenWindow {
                         id: window_id,
                         state: hotkeys_editor::State::new(config),
+                    });
+                } else if command.is(CONTEXT_MENU_EDIT_SERVER) {
+                    let window =
+                        WindowDesc::new(server_editor::root_widget().lens(ServerEditorLens))
+                            .title("Server")
+                            .with_min_size((400.0, 200.0))
+                            .window_size((400.0, 200.0))
+                            // TODO: WindowLevel::Modal(ctx.window().clone())
+                            .set_level(WindowLevel::AppWindow)
+                            .set_always_on_top(true);
+                    let window_id = window.id;
+                    ctx.new_window(window);
+                    data.server_editor = Some(OpenWindow {
+                        id: window_id,
+                        state: server_editor::State::new(data.config.borrow().get_server().clone()),
                     });
                 }
                 #[cfg(feature = "auto-splitting")]
@@ -1037,6 +1055,18 @@ impl AppDelegate<MainState> for WindowManagement {
                     window.state.revert_settings();
                 }
                 data.autosplitter_editor = None;
+                return;
+            }
+        }
+
+        if let Some(window) = &data.server_editor {
+            if id == window.id {
+                if window.state.closed_with_ok {
+                    let new_server = window.state.editor.borrow_mut().take().unwrap();
+                    // TODO: stop and restart server if changed?
+                    data.config.borrow_mut().set_server(new_server);
+                }
+                data.server_editor = None;
                 return;
             }
         }

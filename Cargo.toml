@@ -24,6 +24,8 @@ native-dialog = ">= 0.8.0, <= 0.8.6"
 anyhow = "1.0.93"
 fontdb = "0.16.2"
 clap = { version = "4.5.20", features = ["derive"] }
+tungstenite = "0.27.0"
+futures = "0.3.31"
 
 [build-dependencies]
 embed-resource = "3.0.1"
