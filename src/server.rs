@@ -27,6 +27,7 @@ fn server_main<S: event::CommandSink + event::TimerQuery + Clone + Send + 'stati
             let mut reader = BufReader::new(&stream);
             let mut line = String::new();
             loop {
+                line.clear();
                 let Ok(msg) = reader.read_line(&mut line).map(|_| line.trim_end_matches(['\n', '\r'])) else {
                     stream.shutdown(std::net::Shutdown::Both).ok();
                     return;
