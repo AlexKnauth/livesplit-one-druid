@@ -1,7 +1,7 @@
-use std::net::TcpListener;
+use std::io::{BufRead, BufWriter, Write};
 use std::thread::spawn;
+use std::{io::BufReader, net::TcpListener};
 // use futures_util::FutureExt;
-use tungstenite::accept;
 
 use livesplit_core::{event, networking::server_protocol};
 
@@ -12,7 +12,6 @@ pub fn server_start<S: event::CommandSink + event::TimerQuery + Clone + Send + '
     spawn(move || server_main(port, command_sink));
 }
 
-/// A WebSocket echo server
 fn server_main<S: event::CommandSink + event::TimerQuery + Clone + Send + 'static>(
     port: i64,
     command_sink: S,
@@ -24,23 +23,23 @@ fn server_main<S: event::CommandSink + event::TimerQuery + Clone + Send + 'stati
         };
         let command_sink = command_sink.clone();
         spawn(move || {
-            let Ok(mut websocket) = accept(stream) else {
-                return;
-            };
+            let mut writer = BufWriter::new(&stream);
+            let mut reader = BufReader::new(&stream);
+            let mut line = String::new();
             loop {
-                let Ok(msg) = websocket.read() else {
-                    websocket.close(None).ok();
+                let Ok(msg) = reader.read_line(&mut line).map(|_| line.trim_end_matches(['\n', '\r'])) else {
+                    stream.shutdown(std::net::Shutdown::Both).ok();
                     return;
                 };
 
-                // We do not want to send back ping/pong messages.
-                if msg.is_binary() || msg.is_text() {
+                {
                     let r = futures::executor::block_on(server_protocol::handle_command(
-                        msg.to_text().unwrap(),
+                        msg,
                         &command_sink,
                     ));
                     if !r.is_empty() {
-                        websocket.send(r.into()).unwrap();
+                        writer.write_fmt(format_args!("{}\n", r)).unwrap();
+                        writer.flush().unwrap();
                     }
                 }
             }
