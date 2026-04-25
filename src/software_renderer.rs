@@ -1,6 +1,6 @@
 use druid::{
     piet::{ImageFormat, InterpolationMode, PietImage},
-    PaintCtx, Point, Rect, RenderContext,
+    PaintCtx, Point, Rect, RenderContext, Size,
 };
 use livesplit_core::{layout::LayoutState, rendering::software::Renderer, settings::ImageCache};
 
@@ -16,7 +16,7 @@ pub fn render_scene(
     let scaled_width = size.width * scale.x();
     let scaled_height = size.height * scale.y();
 
-    let (width, height) = (scaled_width as u32, scaled_height as u32);
+    let (width, height) = (scaled_width.round() as u32, scaled_height.round() as u32);
     let dimensions = renderer.image().dimensions();
 
     let new_scaled_dims = renderer.render(state, image_cache, [width, height]);
@@ -48,10 +48,12 @@ pub fn render_scene(
         bottom_image
     };
 
+    let draw_size = Size::new(width as f64 / scale.x(), height as f64 / scale.y());
+
     paint_ctx.draw_image(
         bottom_image,
-        Rect::from_origin_size(Point::ZERO, size),
-        InterpolationMode::NearestNeighbor,
+        Rect::from_origin_size(Point::ZERO, draw_size),
+        InterpolationMode::Bilinear,
     );
 
     new_dims

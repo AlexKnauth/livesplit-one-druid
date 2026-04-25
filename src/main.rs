@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     rc::Rc,
     sync::{Arc, RwLock},
 };
@@ -74,6 +74,8 @@ pub struct MainState {
     #[cfg(feature = "auto-splitting")]
     autosplitter_editor: Option<OpenWindow<autosplitter_editor::State>>,
     image_cache: Rc<RefCell<ImageCache>>,
+    #[data(ignore)]
+    render_size: Rc<Cell<(u32, u32)>>,
     mouse_pass_through: bool,
 }
 
@@ -131,6 +133,7 @@ impl MainState {
             #[cfg(feature = "auto-splitting")]
             autosplitter_editor: None,
             image_cache: Rc::new(RefCell::new(ImageCache::new())),
+            render_size: Rc::new(Cell::new((300, 600))),
             mouse_pass_through: false,
         }
     }
