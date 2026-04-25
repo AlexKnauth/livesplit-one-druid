@@ -52,6 +52,7 @@ jobs:
             os: windows-latest
             features: auto-splitting
             cross: skip
+            install_target: true
 
           - label: Windows x86_64-v3
             target: x86_64-pc-windows-msvc
@@ -60,6 +61,7 @@ jobs:
             os: windows-latest
             features: auto-splitting
             cross: skip
+            install_target: true
 
           # - label: Linux arm Hardware Float
           #   target: arm-unknown-linux-gnueabihf
