@@ -1,4 +1,7 @@
-use std::{cell::{Cell, RefCell}, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use druid::{
     commands, theme,
@@ -42,7 +45,11 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(editor: LayoutEditor, image_cache: Rc<RefCell<ImageCache>>, render_size: Rc<Cell<(u32, u32)>>) -> Self {
+    pub fn new(
+        editor: LayoutEditor,
+        image_cache: Rc<RefCell<ImageCache>>,
+        render_size: Rc<Cell<(u32, u32)>>,
+    ) -> Self {
         let state =
             Rc::new(editor.state(&mut image_cache.borrow_mut(), livesplit_core::Lang::English));
         Self {
@@ -573,7 +580,11 @@ fn bg_cover_dimensions(img_w: u32, img_h: u32, box_w: u32, box_h: u32) -> (u32, 
     }
 }
 
-fn load_bg_image_scaled(path: &std::path::Path, render_w: u32, render_h: u32) -> Option<livesplit_core::settings::Image> {
+fn load_bg_image_scaled(
+    path: &std::path::Path,
+    render_w: u32,
+    render_h: u32,
+) -> Option<livesplit_core::settings::Image> {
     let raw = std::fs::read(path).ok()?;
     let decoded = image::load_from_memory(&raw).ok()?;
     let (img_w, img_h) = (decoded.width(), decoded.height());
@@ -586,7 +597,12 @@ fn load_bg_image_scaled(path: &std::path::Path, render_w: u32, render_h: u32) ->
     };
 
     let mut png_bytes: Vec<u8> = Vec::new();
-    scaled.write_to(&mut std::io::Cursor::new(&mut png_bytes), image::ImageFormat::Png).ok()?;
+    scaled
+        .write_to(
+            &mut std::io::Cursor::new(&mut png_bytes),
+            image::ImageFormat::Png,
+        )
+        .ok()?;
 
     Some(livesplit_core::settings::Image::new(
         png_bytes.as_slice().into(),
@@ -597,7 +613,14 @@ fn load_bg_image_scaled(path: &std::path::Path, render_w: u32, render_h: u32) ->
 struct EditorController;
 
 impl<W: Widget<State>> druid::widget::Controller<State, W> for EditorController {
-    fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut State, env: &Env) {
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut State,
+        env: &Env,
+    ) {
         if let Event::Command(cmd) = event {
             if let Some(&index) = cmd.get(REQUEST_BACKGROUND_IMAGE) {
                 let event_sink = ctx.get_external_handle();
@@ -626,7 +649,11 @@ impl<W: Widget<State>> druid::widget::Controller<State, W> for EditorController 
                 let (render_w, render_h) = data.render_size.get();
                 if let Some(image) = load_bg_image_scaled(path, render_w, render_h) {
                     let image_id = *image.id();
-                    let image_id = *data.image_cache.borrow_mut().cache(&image_id, || image).id();
+                    let image_id = *data
+                        .image_cache
+                        .borrow_mut()
+                        .cache(&image_id, || image)
+                        .id();
 
                     let image_cache = data.image_cache.clone();
 

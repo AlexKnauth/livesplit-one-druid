@@ -417,7 +417,11 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     ctx.new_window(window);
                     data.layout_editor = Some(OpenWindow {
                         id: window_id,
-                        state: layout_editor::State::new(editor, data.image_cache.clone(), data.render_size.clone()),
+                        state: layout_editor::State::new(
+                            editor,
+                            data.image_cache.clone(),
+                            data.render_size.clone(),
+                        ),
                     });
                 } else if let Some(file_info) = command.get(CONTEXT_MENU_OPEN_LAYOUT) {
                     let result = data.config.borrow_mut().open_layout(

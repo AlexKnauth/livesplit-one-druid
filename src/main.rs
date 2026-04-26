@@ -137,7 +137,10 @@ impl MainState {
             #[cfg(feature = "auto-splitting")]
             autosplitter_editor: None,
             image_cache: Rc::new(RefCell::new(ImageCache::new())),
-            render_size: Rc::new(Cell::new((window_w.round() as u32, window_h.round() as u32))),
+            render_size: Rc::new(Cell::new((
+                window_w.round() as u32,
+                window_h.round() as u32,
+            ))),
             mouse_pass_through: false,
         }
     }
