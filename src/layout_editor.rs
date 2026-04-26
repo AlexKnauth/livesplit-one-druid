@@ -35,6 +35,8 @@ pub struct State {
     pub closed_with_ok: bool,
     on_component_settings_tab: bool,
     image_cache: Rc<RefCell<ImageCache>>,
+    /// Shared cell written by the splits window each paint frame so that
+    /// background images can be pre-scaled to the correct render dimensions.
     #[data(ignore)]
     render_size: Rc<Cell<(u32, u32)>>,
 }
@@ -554,10 +556,19 @@ fn bg_cover_dimensions(img_w: u32, img_h: u32, box_w: u32, box_h: u32) -> (u32, 
     let img_aspect = img_w as f64 / img_h as f64;
     let box_aspect = box_w as f64 / box_h as f64;
     if img_aspect > box_aspect {
-        let new_w = ((img_w as f64 * box_h as f64) / img_h as f64).round() as u32;
+        // The centering offset in the renderer is 0.5*(box_w - new_w). For it to land on
+        // an integer pixel boundary, (new_w - box_w) must be even. Adjust by +1 if needed.
+        let new_w = {
+            let w = ((img_w as f64 * box_h as f64) / img_h as f64).round() as u32;
+            w + ((w ^ box_w) & 1)
+        };
         (new_w.max(1), box_h)
     } else {
-        let new_h = ((img_h as f64 * box_w as f64) / img_w as f64).round() as u32;
+        // Same parity alignment for the vertical centering offset.
+        let new_h = {
+            let h = ((img_h as f64 * box_w as f64) / img_w as f64).round() as u32;
+            h + ((h ^ box_h) & 1)
+        };
         (box_w, new_h.max(1))
     }
 }
@@ -591,12 +602,12 @@ impl<W: Widget<State>> druid::widget::Controller<State, W> for EditorController 
             if let Some(&index) = cmd.get(REQUEST_BACKGROUND_IMAGE) {
                 let event_sink = ctx.get_external_handle();
                 std::thread::spawn(move || {
-                    if let Ok(Some(path)) = native_dialog::DialogBuilder::file()
+                    let dialog = native_dialog::DialogBuilder::file();
+                    #[cfg(not(target_os = "macos"))]
+                    let dialog = dialog
                         .add_filter("Images", &["png", "jpg", "jpeg", "bmp", "webp"])
-                        .add_filter("All Files", &["*"])
-                        .open_single_file()
-                        .show()
-                    {
+                        .add_filter("All Files", &["*"]);
+                    if let Ok(Some(path)) = dialog.open_single_file().show() {
                         let _ = event_sink.submit_command(
                             LOAD_BACKGROUND_IMAGE_RESULT,
                             (index, path),
