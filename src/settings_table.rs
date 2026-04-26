@@ -9,9 +9,12 @@ use crate::{
 };
 use druid::{
     lens::Identity,
-    widget::{Flex, Label, LineBreaking, List, ListIter, Stepper, Switch, TextBox, ViewSwitcher, Button},
+    widget::{
+        Button, Flex, Label, LineBreaking, List, ListIter, Stepper, Switch, TextBox, ViewSwitcher,
+    },
     BoxConstraints, Color, Data, Env, Event, EventCtx, Insets, LayoutCtx, Lens, LensExt, LifeCycle,
-    LifeCycleCtx, PaintCtx, RenderContext, Size, TextAlignment, UpdateCtx, Widget, WidgetExt, Selector,
+    LifeCycleCtx, PaintCtx, RenderContext, Selector, Size, TextAlignment, UpdateCtx, Widget,
+    WidgetExt,
 };
 use livesplit_core::{
     component::{
@@ -20,14 +23,15 @@ use livesplit_core::{
     },
     layout::LayoutDirection,
     settings::{
-        self, Alignment, ColumnKind, Font, FontStretch, FontStyle, FontWeight, Gradient,
-        LayoutBackground, ListGradient, Value, BackgroundImage,
+        self, Alignment, BackgroundImage, ColumnKind, Font, FontStretch, FontStyle, FontWeight,
+        Gradient, LayoutBackground, ListGradient, Value,
     },
     timing::formatter::{Accuracy, DigitsFormat},
     TimingMethod,
 };
 
-pub const REQUEST_BACKGROUND_IMAGE: Selector<usize> = Selector::new("livesplit-one-druid.request-background-image");
+pub const REQUEST_BACKGROUND_IMAGE: Selector<usize> =
+    Selector::new("livesplit-one-druid.request-background-image");
 
 #[derive(Clone, PartialEq, Lens)]
 pub struct SettingsRow {
@@ -1004,44 +1008,55 @@ fn color() -> impl Widget<SettingsRow> {
 fn layout_background() -> impl Widget<SettingsRow> {
     Flex::column()
         .with_child(
-            combo_box::static_list(&["Solid Color", "Vertical Gradient", "Horizontal Gradient", "Image"])
-                .lens(Identity.map(
-                    |row: &SettingsRow| match &row.value {
-                        Value::LayoutBackground(v) => match v {
-                            LayoutBackground::Gradient(Gradient::Plain(_)) => 0,
-                            LayoutBackground::Gradient(Gradient::Vertical(_, _)) => 1,
-                            LayoutBackground::Gradient(Gradient::Horizontal(_, _)) => 2,
-                            LayoutBackground::Image(_) => 3,
-                            LayoutBackground::Gradient(Gradient::Transparent) => 0,
-                        },
-                        _ => 0,
+            combo_box::static_list(&[
+                "Solid Color",
+                "Vertical Gradient",
+                "Horizontal Gradient",
+                "Image",
+            ])
+            .lens(Identity.map(
+                |row: &SettingsRow| match &row.value {
+                    Value::LayoutBackground(v) => match v {
+                        LayoutBackground::Gradient(Gradient::Plain(_)) => 0,
+                        LayoutBackground::Gradient(Gradient::Vertical(_, _)) => 1,
+                        LayoutBackground::Gradient(Gradient::Horizontal(_, _)) => 2,
+                        LayoutBackground::Image(_) => 3,
+                        LayoutBackground::Gradient(Gradient::Transparent) => 0,
                     },
-                    |row: &mut SettingsRow, value: usize| {
-                        if let Value::LayoutBackground(v) = &mut row.value {
-                            let (a, b) = match v {
-                                LayoutBackground::Gradient(Gradient::Plain(c)) => (*c, *c),
-                                LayoutBackground::Gradient(Gradient::Vertical(a, b))
-                                | LayoutBackground::Gradient(Gradient::Horizontal(a, b)) => (*a, *b),
-                                LayoutBackground::Gradient(Gradient::Transparent) => (settings::Color::transparent(), settings::Color::transparent()),
-                                LayoutBackground::Image(_) => (settings::Color::transparent(), settings::Color::transparent()),
-                            };
-                            *v = match value {
-                                0 => LayoutBackground::Gradient(Gradient::Plain(a)),
-                                1 => LayoutBackground::Gradient(Gradient::Vertical(a, b)),
-                                2 => LayoutBackground::Gradient(Gradient::Horizontal(a, b)),
-                                3 => {
-                                    if let LayoutBackground::Image(_) = v {
-                                        return;
-                                    }
-                                    LayoutBackground::Image(BackgroundImage::default())
+                    _ => 0,
+                },
+                |row: &mut SettingsRow, value: usize| {
+                    if let Value::LayoutBackground(v) = &mut row.value {
+                        let (a, b) = match v {
+                            LayoutBackground::Gradient(Gradient::Plain(c)) => (*c, *c),
+                            LayoutBackground::Gradient(Gradient::Vertical(a, b))
+                            | LayoutBackground::Gradient(Gradient::Horizontal(a, b)) => (*a, *b),
+                            LayoutBackground::Gradient(Gradient::Transparent) => (
+                                settings::Color::transparent(),
+                                settings::Color::transparent(),
+                            ),
+                            LayoutBackground::Image(_) => (
+                                settings::Color::transparent(),
+                                settings::Color::transparent(),
+                            ),
+                        };
+                        *v = match value {
+                            0 => LayoutBackground::Gradient(Gradient::Plain(a)),
+                            1 => LayoutBackground::Gradient(Gradient::Vertical(a, b)),
+                            2 => LayoutBackground::Gradient(Gradient::Horizontal(a, b)),
+                            3 => {
+                                if let LayoutBackground::Image(_) = v {
+                                    return;
                                 }
-                                _ => return,
-                            };
-                        }
-                    },
-                ))
-                .expand_width()
-                .center(),
+                                LayoutBackground::Image(BackgroundImage::default())
+                            }
+                            _ => return,
+                        };
+                    }
+                },
+            ))
+            .expand_width()
+            .center(),
         )
         .with_child(ViewSwitcher::new(
             |row: &SettingsRow, _| match &row.value {
@@ -1062,68 +1077,42 @@ fn layout_background() -> impl Widget<SettingsRow> {
                             .lens(Identity.map(
                                 |row: &SettingsRow| {
                                     ColorData(match row.value {
-                                        Value::LayoutBackground(LayoutBackground::Gradient(Gradient::Plain(v))) => v,
+                                        Value::LayoutBackground(LayoutBackground::Gradient(
+                                            Gradient::Plain(v),
+                                        )) => v,
                                         _ => livesplit_core::settings::Color::transparent(),
                                     })
                                 },
                                 |row: &mut SettingsRow, color: ColorData| {
-                                    if let Value::LayoutBackground(LayoutBackground::Gradient(Gradient::Plain(v))) = &mut row.value {
+                                    if let Value::LayoutBackground(LayoutBackground::Gradient(
+                                        Gradient::Plain(v),
+                                    )) = &mut row.value
+                                    {
                                         *v = color.0;
                                     }
                                 },
                             )),
                     ),
-                    LayoutBackground::Gradient(Gradient::Vertical(_, _)) => {
-                        Box::new(
-                            Flex::row()
-                                .with_flex_child(
-                                    color_editor().lens(Identity.map(
-                                        |row: &SettingsRow| {
-                                            ColorData(match row.value {
-                                                Value::LayoutBackground(LayoutBackground::Gradient(Gradient::Vertical(v, _))) => v,
-                                                _ => livesplit_core::settings::Color::transparent(),
-                                            })
-                                        },
-                                        |row: &mut SettingsRow, color: ColorData| {
-                                            if let Value::LayoutBackground(LayoutBackground::Gradient(Gradient::Vertical(v, _))) = &mut row.value {
-                                                *v = color.0;
-                                            }
-                                        },
-                                    )),
-                                    1.0,
-                                )
-                                .with_spacer(GRID_BORDER)
-                                .with_flex_child(
-                                    color_editor().lens(Identity.map(
-                                        |row: &SettingsRow| {
-                                            ColorData(match row.value {
-                                                Value::LayoutBackground(LayoutBackground::Gradient(Gradient::Vertical(_, v))) => v,
-                                                _ => livesplit_core::settings::Color::transparent(),
-                                            })
-                                        },
-                                        |row: &mut SettingsRow, color: ColorData| {
-                                            if let Value::LayoutBackground(LayoutBackground::Gradient(Gradient::Vertical(_, v))) = &mut row.value {
-                                                *v = color.0;
-                                            }
-                                        },
-                                    )),
-                                    1.0,
-                                )
-                                .padding(Insets::new(0.0, GRID_BORDER, 0.0, 0.0)),
-                        )
-                    }
-                    LayoutBackground::Gradient(Gradient::Horizontal(_, _)) => Box::new(
+                    LayoutBackground::Gradient(Gradient::Vertical(_, _)) => Box::new(
                         Flex::row()
                             .with_flex_child(
                                 color_editor().lens(Identity.map(
                                     |row: &SettingsRow| {
                                         ColorData(match row.value {
-                                            Value::LayoutBackground(LayoutBackground::Gradient(Gradient::Horizontal(v, _))) => v,
+                                            Value::LayoutBackground(
+                                                LayoutBackground::Gradient(Gradient::Vertical(
+                                                    v,
+                                                    _,
+                                                )),
+                                            ) => v,
                                             _ => livesplit_core::settings::Color::transparent(),
                                         })
                                     },
                                     |row: &mut SettingsRow, color: ColorData| {
-                                        if let Value::LayoutBackground(LayoutBackground::Gradient(Gradient::Horizontal(v, _))) = &mut row.value {
+                                        if let Value::LayoutBackground(
+                                            LayoutBackground::Gradient(Gradient::Vertical(v, _)),
+                                        ) = &mut row.value
+                                        {
                                             *v = color.0;
                                         }
                                     },
@@ -1135,12 +1124,73 @@ fn layout_background() -> impl Widget<SettingsRow> {
                                 color_editor().lens(Identity.map(
                                     |row: &SettingsRow| {
                                         ColorData(match row.value {
-                                            Value::LayoutBackground(LayoutBackground::Gradient(Gradient::Horizontal(_, v))) => v,
+                                            Value::LayoutBackground(
+                                                LayoutBackground::Gradient(Gradient::Vertical(
+                                                    _,
+                                                    v,
+                                                )),
+                                            ) => v,
                                             _ => livesplit_core::settings::Color::transparent(),
                                         })
                                     },
                                     |row: &mut SettingsRow, color: ColorData| {
-                                        if let Value::LayoutBackground(LayoutBackground::Gradient(Gradient::Horizontal(_, v))) = &mut row.value {
+                                        if let Value::LayoutBackground(
+                                            LayoutBackground::Gradient(Gradient::Vertical(_, v)),
+                                        ) = &mut row.value
+                                        {
+                                            *v = color.0;
+                                        }
+                                    },
+                                )),
+                                1.0,
+                            )
+                            .padding(Insets::new(0.0, GRID_BORDER, 0.0, 0.0)),
+                    ),
+                    LayoutBackground::Gradient(Gradient::Horizontal(_, _)) => Box::new(
+                        Flex::row()
+                            .with_flex_child(
+                                color_editor().lens(Identity.map(
+                                    |row: &SettingsRow| {
+                                        ColorData(match row.value {
+                                            Value::LayoutBackground(
+                                                LayoutBackground::Gradient(Gradient::Horizontal(
+                                                    v,
+                                                    _,
+                                                )),
+                                            ) => v,
+                                            _ => livesplit_core::settings::Color::transparent(),
+                                        })
+                                    },
+                                    |row: &mut SettingsRow, color: ColorData| {
+                                        if let Value::LayoutBackground(
+                                            LayoutBackground::Gradient(Gradient::Horizontal(v, _)),
+                                        ) = &mut row.value
+                                        {
+                                            *v = color.0;
+                                        }
+                                    },
+                                )),
+                                1.0,
+                            )
+                            .with_spacer(GRID_BORDER)
+                            .with_flex_child(
+                                color_editor().lens(Identity.map(
+                                    |row: &SettingsRow| {
+                                        ColorData(match row.value {
+                                            Value::LayoutBackground(
+                                                LayoutBackground::Gradient(Gradient::Horizontal(
+                                                    _,
+                                                    v,
+                                                )),
+                                            ) => v,
+                                            _ => livesplit_core::settings::Color::transparent(),
+                                        })
+                                    },
+                                    |row: &mut SettingsRow, color: ColorData| {
+                                        if let Value::LayoutBackground(
+                                            LayoutBackground::Gradient(Gradient::Horizontal(_, v)),
+                                        ) = &mut row.value
+                                        {
                                             *v = color.0;
                                         }
                                     },
@@ -1154,7 +1204,7 @@ fn layout_background() -> impl Widget<SettingsRow> {
                             .on_click(|ctx, row: &mut SettingsRow, _env| {
                                 ctx.submit_command(REQUEST_BACKGROUND_IMAGE.with(row.index));
                             })
-                            .expand_width()
+                            .expand_width(),
                     ),
                     _ => Box::new(Flex::column()),
                 },

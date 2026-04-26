@@ -721,18 +721,16 @@ fn show_file_dialog(
         }
     }
 
-    /*
+    #[cfg(not(target_os = "macos"))]
     let ext_refs: Vec<&str> = all_extensions.iter().map(|s| s.as_str()).collect();
-    */
 
     let mut dialog = native_dialog::DialogBuilder::file();
 
-    /*
+    #[cfg(not(target_os = "macos"))]
     // Add a single filter with all extensions combined
     if !ext_refs.is_empty() {
         dialog = dialog.add_filter("Supported Files", &ext_refs);
     }
-    */
 
     // Set starting directory if provided and it exists
     if let Some(dir) = start_dir {

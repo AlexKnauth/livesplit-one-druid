@@ -1,4 +1,7 @@
-use std::{cell::{Cell, RefCell}, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use druid::{
     commands, theme,
@@ -35,12 +38,18 @@ pub struct State {
     pub closed_with_ok: bool,
     on_component_settings_tab: bool,
     image_cache: Rc<RefCell<ImageCache>>,
+    /// Shared cell written by the splits window each paint frame so that
+    /// background images can be pre-scaled to the correct render dimensions.
     #[data(ignore)]
     render_size: Rc<Cell<(u32, u32)>>,
 }
 
 impl State {
-    pub fn new(editor: LayoutEditor, image_cache: Rc<RefCell<ImageCache>>, render_size: Rc<Cell<(u32, u32)>>) -> Self {
+    pub fn new(
+        editor: LayoutEditor,
+        image_cache: Rc<RefCell<ImageCache>>,
+        render_size: Rc<Cell<(u32, u32)>>,
+    ) -> Self {
         let state =
             Rc::new(editor.state(&mut image_cache.borrow_mut(), livesplit_core::Lang::English));
         Self {
@@ -554,15 +563,28 @@ fn bg_cover_dimensions(img_w: u32, img_h: u32, box_w: u32, box_h: u32) -> (u32, 
     let img_aspect = img_w as f64 / img_h as f64;
     let box_aspect = box_w as f64 / box_h as f64;
     if img_aspect > box_aspect {
-        let new_w = ((img_w as f64 * box_h as f64) / img_h as f64).round() as u32;
+        // The centering offset in the renderer is 0.5*(box_w - new_w). For it to land on
+        // an integer pixel boundary, (new_w - box_w) must be even. Adjust by +1 if needed.
+        let new_w = {
+            let w = ((img_w as f64 * box_h as f64) / img_h as f64).round() as u32;
+            w + ((w ^ box_w) & 1)
+        };
         (new_w.max(1), box_h)
     } else {
-        let new_h = ((img_h as f64 * box_w as f64) / img_w as f64).round() as u32;
+        // Same parity alignment for the vertical centering offset.
+        let new_h = {
+            let h = ((img_h as f64 * box_w as f64) / img_w as f64).round() as u32;
+            h + ((h ^ box_h) & 1)
+        };
         (box_w, new_h.max(1))
     }
 }
 
-fn load_bg_image_scaled(path: &std::path::Path, render_w: u32, render_h: u32) -> Option<livesplit_core::settings::Image> {
+fn load_bg_image_scaled(
+    path: &std::path::Path,
+    render_w: u32,
+    render_h: u32,
+) -> Option<livesplit_core::settings::Image> {
     let raw = std::fs::read(path).ok()?;
     let decoded = image::load_from_memory(&raw).ok()?;
     let (img_w, img_h) = (decoded.width(), decoded.height());
@@ -575,7 +597,12 @@ fn load_bg_image_scaled(path: &std::path::Path, render_w: u32, render_h: u32) ->
     };
 
     let mut png_bytes: Vec<u8> = Vec::new();
-    scaled.write_to(&mut std::io::Cursor::new(&mut png_bytes), image::ImageFormat::Png).ok()?;
+    scaled
+        .write_to(
+            &mut std::io::Cursor::new(&mut png_bytes),
+            image::ImageFormat::Png,
+        )
+        .ok()?;
 
     Some(livesplit_core::settings::Image::new(
         png_bytes.as_slice().into(),
@@ -586,17 +613,24 @@ fn load_bg_image_scaled(path: &std::path::Path, render_w: u32, render_h: u32) ->
 struct EditorController;
 
 impl<W: Widget<State>> druid::widget::Controller<State, W> for EditorController {
-    fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut State, env: &Env) {
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut State,
+        env: &Env,
+    ) {
         if let Event::Command(cmd) = event {
             if let Some(&index) = cmd.get(REQUEST_BACKGROUND_IMAGE) {
                 let event_sink = ctx.get_external_handle();
                 std::thread::spawn(move || {
-                    if let Ok(Some(path)) = native_dialog::DialogBuilder::file()
+                    let dialog = native_dialog::DialogBuilder::file();
+                    #[cfg(not(target_os = "macos"))]
+                    let dialog = dialog
                         .add_filter("Images", &["png", "jpg", "jpeg", "bmp", "webp"])
-                        .add_filter("All Files", &["*"])
-                        .open_single_file()
-                        .show()
-                    {
+                        .add_filter("All Files", &["*"]);
+                    if let Ok(Some(path)) = dialog.open_single_file().show() {
                         let _ = event_sink.submit_command(
                             LOAD_BACKGROUND_IMAGE_RESULT,
                             (index, path),
@@ -615,7 +649,11 @@ impl<W: Widget<State>> druid::widget::Controller<State, W> for EditorController 
                 let (render_w, render_h) = data.render_size.get();
                 if let Some(image) = load_bg_image_scaled(path, render_w, render_h) {
                     let image_id = *image.id();
-                    let image_id = *data.image_cache.borrow_mut().cache(&image_id, || image).id();
+                    let image_id = *data
+                        .image_cache
+                        .borrow_mut()
+                        .cache(&image_id, || image)
+                        .id();
 
                     let image_cache = data.image_cache.clone();
 

@@ -275,6 +275,10 @@ impl Config {
             .unwrap_or_else(|| Layout::default_layout(livesplit_core::Lang::English))
     }
 
+    pub fn window_size(&self) -> (f64, f64) {
+        (self.window.width, self.window.height)
+    }
+
     pub fn set_window_size(&mut self, (width, height): (f64, f64)) {
         self.window.width = width;
         self.window.height = height;
