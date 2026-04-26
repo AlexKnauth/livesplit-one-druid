@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     rc::Rc,
     sync::{Arc, RwLock},
 };
@@ -74,6 +74,10 @@ pub struct MainState {
     #[cfg(feature = "auto-splitting")]
     autosplitter_editor: Option<OpenWindow<autosplitter_editor::State>>,
     image_cache: Rc<RefCell<ImageCache>>,
+    /// Shared with the layout editor so it can read the current render dimensions
+    /// of the splits window. The splits window writes here every paint frame.
+    #[data(ignore)]
+    render_size: Rc<Cell<(u32, u32)>>,
     mouse_pass_through: bool,
 }
 
@@ -114,6 +118,8 @@ impl MainState {
         #[cfg(feature = "auto-splitting")]
         config.maybe_load_auto_splitter(&auto_splitter, timer.clone());
 
+        let (window_w, window_h) = config.window_size();
+
         Self {
             timer,
             #[cfg(feature = "auto-splitting")]
@@ -131,6 +137,10 @@ impl MainState {
             #[cfg(feature = "auto-splitting")]
             autosplitter_editor: None,
             image_cache: Rc::new(RefCell::new(ImageCache::new())),
+            render_size: Rc::new(Cell::new((
+                window_w.round() as u32,
+                window_h.round() as u32,
+            ))),
             mouse_pass_through: false,
         }
     }

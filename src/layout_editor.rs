@@ -1,4 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use druid::{
     commands, theme,
@@ -19,9 +22,12 @@ use crate::{
         BUTTON_ACTIVE_BOTTOM, BUTTON_ACTIVE_TOP, BUTTON_BORDER, BUTTON_HEIGHT, BUTTON_SPACING,
         DIALOG_BUTTON_HEIGHT, DIALOG_BUTTON_WIDTH, MARGIN, SPACING,
     },
-    settings_table::{self, SettingsRow},
+    settings_table::{self, SettingsRow, REQUEST_BACKGROUND_IMAGE},
     MainState,
 };
+
+pub const LOAD_BACKGROUND_IMAGE_RESULT: Selector<(usize, std::path::PathBuf)> =
+    Selector::new("livesplit-one-druid.load-background-image-result");
 
 #[derive(Clone, Data)]
 pub struct State {
@@ -32,10 +38,18 @@ pub struct State {
     pub closed_with_ok: bool,
     on_component_settings_tab: bool,
     image_cache: Rc<RefCell<ImageCache>>,
+    /// Shared cell written by the splits window each paint frame so that
+    /// background images can be pre-scaled to the correct render dimensions.
+    #[data(ignore)]
+    render_size: Rc<Cell<(u32, u32)>>,
 }
 
 impl State {
-    pub fn new(editor: LayoutEditor, image_cache: Rc<RefCell<ImageCache>>) -> Self {
+    pub fn new(
+        editor: LayoutEditor,
+        image_cache: Rc<RefCell<ImageCache>>,
+        render_size: Rc<Cell<(u32, u32)>>,
+    ) -> Self {
         let state =
             Rc::new(editor.state(&mut image_cache.borrow_mut(), livesplit_core::Lang::English));
         Self {
@@ -44,6 +58,7 @@ impl State {
             closed_with_ok: false,
             on_component_settings_tab: false,
             image_cache,
+            render_size,
         }
     }
 
@@ -541,6 +556,129 @@ fn settings_editor() -> impl Widget<State> {
         .expand_width()
 }
 
+fn bg_cover_dimensions(img_w: u32, img_h: u32, box_w: u32, box_h: u32) -> (u32, u32) {
+    if box_w == 0 || box_h == 0 || img_w == 0 || img_h == 0 {
+        return (img_w, img_h);
+    }
+    let img_aspect = img_w as f64 / img_h as f64;
+    let box_aspect = box_w as f64 / box_h as f64;
+    if img_aspect > box_aspect {
+        // The centering offset in the renderer is 0.5*(box_w - new_w). For it to land on
+        // an integer pixel boundary, (new_w - box_w) must be even. Adjust by +1 if needed.
+        let new_w = {
+            let w = ((img_w as f64 * box_h as f64) / img_h as f64).round() as u32;
+            w + ((w ^ box_w) & 1)
+        };
+        (new_w.max(1), box_h)
+    } else {
+        // Same parity alignment for the vertical centering offset.
+        let new_h = {
+            let h = ((img_h as f64 * box_w as f64) / img_w as f64).round() as u32;
+            h + ((h ^ box_h) & 1)
+        };
+        (box_w, new_h.max(1))
+    }
+}
+
+fn load_bg_image_scaled(
+    path: &std::path::Path,
+    render_w: u32,
+    render_h: u32,
+) -> Option<livesplit_core::settings::Image> {
+    let raw = std::fs::read(path).ok()?;
+    let decoded = image::load_from_memory(&raw).ok()?;
+    let (img_w, img_h) = (decoded.width(), decoded.height());
+    let (target_w, target_h) = bg_cover_dimensions(img_w, img_h, render_w, render_h);
+
+    let scaled = if img_w != target_w || img_h != target_h {
+        decoded.resize_exact(target_w, target_h, image::imageops::FilterType::Lanczos3)
+    } else {
+        decoded
+    };
+
+    let mut png_bytes: Vec<u8> = Vec::new();
+    scaled
+        .write_to(
+            &mut std::io::Cursor::new(&mut png_bytes),
+            image::ImageFormat::Png,
+        )
+        .ok()?;
+
+    Some(livesplit_core::settings::Image::new(
+        png_bytes.as_slice().into(),
+        u32::MAX,
+    ))
+}
+
+struct EditorController;
+
+impl<W: Widget<State>> druid::widget::Controller<State, W> for EditorController {
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut State,
+        env: &Env,
+    ) {
+        if let Event::Command(cmd) = event {
+            if let Some(&index) = cmd.get(REQUEST_BACKGROUND_IMAGE) {
+                let event_sink = ctx.get_external_handle();
+                std::thread::spawn(move || {
+                    let dialog = native_dialog::DialogBuilder::file();
+                    #[cfg(not(target_os = "macos"))]
+                    let dialog = dialog
+                        .add_filter("Images", &["png", "jpg", "jpeg", "bmp", "webp"])
+                        .add_filter("All Files", &["*"]);
+                    if let Ok(Some(path)) = dialog.open_single_file().show() {
+                        let _ = event_sink.submit_command(
+                            LOAD_BACKGROUND_IMAGE_RESULT,
+                            (index, path),
+                            druid::Target::Auto,
+                        );
+                    }
+                });
+                ctx.set_handled();
+                return;
+            } else if let Some((index, path)) = cmd.get(LOAD_BACKGROUND_IMAGE_RESULT) {
+                if data.on_component_settings_tab {
+                    ctx.set_handled();
+                    return;
+                }
+
+                let (render_w, render_h) = data.render_size.get();
+                if let Some(image) = load_bg_image_scaled(path, render_w, render_h) {
+                    let image_id = *image.id();
+                    let image_id = *data
+                        .image_cache
+                        .borrow_mut()
+                        .cache(&image_id, || image)
+                        .id();
+
+                    let image_cache = data.image_cache.clone();
+
+                    data.mutate(|editor| {
+                        let existing = Value::LayoutBackground(
+                            livesplit_core::settings::LayoutBackground::Image(
+                                livesplit_core::settings::BackgroundImage {
+                                    image: image_id,
+                                    brightness: 1.0,
+                                    opacity: 1.0,
+                                    blur: 0.0,
+                                },
+                            ),
+                        );
+                        editor.set_general_settings_value(*index, existing, &image_cache.borrow());
+                    });
+                }
+                ctx.set_handled();
+                return;
+            }
+        }
+        child.event(ctx, event, data, env)
+    }
+}
+
 fn editor() -> impl Widget<State> {
     Scroll::new(
         Flex::column()
@@ -551,6 +689,7 @@ fn editor() -> impl Widget<State> {
     )
     .vertical()
     .expand_height()
+    .controller(EditorController)
 }
 
 pub fn root_widget() -> impl Widget<State> {
