@@ -1659,22 +1659,3 @@ fn optional_timing_method() -> impl Widget<SettingsRow> {
             1.0,
         )
 }
-
-fn color_from_layout_background(
-    lb: &LayoutBackground<settings::ImageId>,
-) -> livesplit_core::settings::Color {
-    match lb {
-        LayoutBackground::Gradient(g) => color_from_gradiant(g),
-        // TODO: What
-        _ => livesplit_core::settings::Color::transparent(),
-    }
-}
-
-fn color_from_gradiant(g: &Gradient) -> livesplit_core::settings::Color {
-    match g {
-        Gradient::Transparent => livesplit_core::settings::Color::transparent(),
-        Gradient::Plain(c) => *c,
-        Gradient::Horizontal(c, _) => *c,
-        Gradient::Vertical(c, _) => *c,
-    }
-}
