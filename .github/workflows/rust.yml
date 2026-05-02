@@ -21,7 +21,7 @@ jobs:
       matrix:
         label:
           - Windows aarch64
-          - Windows i686
+          # - Windows i686
           - Windows x86_64
           - Windows x86_64-v3
           # - Linux arm Hardware Float
@@ -41,11 +41,11 @@ jobs:
             cross: skip
             install_target: true
 
-          - label: Windows i686
-            target: i686-pc-windows-msvc
-            os: windows-latest
-            cross: skip
-            install_target: true
+          # - label: Windows i686
+          #   target: i686-pc-windows-msvc
+          #   os: windows-latest
+          #   cross: skip
+          #   install_target: true
 
           - label: Windows x86_64
             target: x86_64-pc-windows-msvc
