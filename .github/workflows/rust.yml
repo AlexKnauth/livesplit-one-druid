@@ -178,6 +178,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          prerelease: ${{ contains(github.ref, 'pre') }}
           generate_release_notes: true
           files: livesplit-one-*.*
         env:
