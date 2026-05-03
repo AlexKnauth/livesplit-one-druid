@@ -10,7 +10,7 @@ use druid::{
     FileDialogOptions, FileInfo, FileSpec, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, MenuItem,
     Point, Selector, Size, UpdateCtx, Widget, WidgetExt, WindowDesc, WindowId, WindowLevel,
 };
-#[cfg(target_os = "linux")]
+// #[cfg(target_os = "linux")]
 use druid::Cursor;
 use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
 
@@ -898,10 +898,10 @@ fn build_save_layout_as() -> druid::Command {
 }
 
 const DRAG_EVENT_BATCH_SIZE: usize = 20;
-#[cfg(target_os = "linux")]
+// #[cfg(target_os = "linux")]
 const RESIZE_BORDER: f64 = 5.0;
 
-#[cfg(target_os = "linux")]
+// #[cfg(target_os = "linux")]
 #[derive(Clone, Copy, PartialEq)]
 enum ResizeEdge {
     Left,
@@ -914,7 +914,7 @@ enum ResizeEdge {
     BottomRight,
 }
 
-#[cfg(target_os = "linux")]
+// #[cfg(target_os = "linux")]
 impl ResizeEdge {
     fn get(pos: Point, size: Size) -> Option<Self> {
         let near_left = pos.x < RESIZE_BORDER;
@@ -953,28 +953,28 @@ struct WindowInteractionController {
     /// in display points measured relative to the parent.
     drag_old_pos: VecDeque<Point>,
     /// The edge/corner being resized, if a resize is in progress.
-    #[cfg(target_os = "linux")]
+    // #[cfg(target_os = "linux")]
     resize_edge: Option<ResizeEdge>,
     /// Mouse position in screen coordinates at the time resize starts.
     /// Only used for edges that move the window (left/top-anchored edges).
-    #[cfg(target_os = "linux")]
+    // #[cfg(target_os = "linux")]
     resize_init_screen_pos: Option<Point>,
     /// Mouse position in window coordinates at the time resize starts.
     /// Used for edges that don't move the window (right/bottom-anchored edges).
-    #[cfg(target_os = "linux")]
+    // #[cfg(target_os = "linux")]
     resize_init_mouse_win_pos: Option<Point>,
     /// Window position at the time resize starts.
-    #[cfg(target_os = "linux")]
+    // #[cfg(target_os = "linux")]
     resize_init_win_pos: Option<Point>,
     /// Window size at the time resize starts.
-    #[cfg(target_os = "linux")]
+    // #[cfg(target_os = "linux")]
     resize_init_size: Option<Size>,
     /// Last position sent to the window system, to avoid redundant calls.
-    #[cfg(target_os = "linux")]
+    // #[cfg(target_os = "linux")]
     resize_last_pos: Option<Point>,
     /// Last size sent to the window system, to avoid redundant calls and
     /// stale get_size() queries.
-    #[cfg(target_os = "linux")]
+    // #[cfg(target_os = "linux")]
     resize_last_size: Option<Size>,
 }
 
@@ -983,19 +983,19 @@ impl WindowInteractionController {
         Self {
             drag_init_pos: None,
             drag_old_pos: VecDeque::with_capacity(DRAG_EVENT_BATCH_SIZE),
-            #[cfg(target_os = "linux")]
+            // #[cfg(target_os = "linux")]
             resize_edge: None,
-            #[cfg(target_os = "linux")]
+            // #[cfg(target_os = "linux")]
             resize_init_screen_pos: None,
-            #[cfg(target_os = "linux")]
+            // #[cfg(target_os = "linux")]
             resize_init_mouse_win_pos: None,
-            #[cfg(target_os = "linux")]
+            // #[cfg(target_os = "linux")]
             resize_init_win_pos: None,
-            #[cfg(target_os = "linux")]
+            // #[cfg(target_os = "linux")]
             resize_init_size: None,
-            #[cfg(target_os = "linux")]
+            // #[cfg(target_os = "linux")]
             resize_last_pos: None,
-            #[cfg(target_os = "linux")]
+            // #[cfg(target_os = "linux")]
             resize_last_size: None,
         }
     }
@@ -1006,7 +1006,7 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
         match event {
             Event::MouseDown(me) if me.buttons.has_left() => {
                 let win_pos = ctx.window().get_position();
-                #[cfg(target_os = "linux")]
+                // #[cfg(target_os = "linux")]
                 let start_drag = {
                     let win_size = ctx.window().get_size();
                     if let Some(edge) = ResizeEdge::get(me.window_pos, win_size) {
@@ -1027,8 +1027,10 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                         true
                     }
                 };
+                /*
                 #[cfg(not(target_os = "linux"))]
                 let start_drag = true;
+                */
                 if start_drag {
                     ctx.set_active(true);
                     self.drag_old_pos.clear();
@@ -1039,7 +1041,7 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
             Event::MouseMove(me) => {
                 if ctx.is_active() && me.buttons.has_left() {
                     // On Linux, attempt to handle as a resize first.
-                    #[cfg(target_os = "linux")]
+                    // #[cfg(target_os = "linux")]
                     let handled_as_resize = if let (
                         Some(edge),
                         Some(init_screen),
@@ -1126,8 +1128,10 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                     } else {
                         false
                     };
+                    /*
                     #[cfg(not(target_os = "linux"))]
                     let handled_as_resize = false;
+                    */
 
                     // Drag-to-move: runs on all platforms when not resizing.
                     if !handled_as_resize {
@@ -1160,7 +1164,7 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                     }
                 } else if !ctx.is_active() {
                     // Show resize cursors when hovering near edges (Linux only).
-                    #[cfg(target_os = "linux")]
+                    // #[cfg(target_os = "linux")]
                     {
                         let window_size = ctx.window().get_size();
                         match ResizeEdge::get(me.window_pos, window_size) {
@@ -1172,7 +1176,7 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
             }
             Event::MouseUp(_) if ctx.is_active() => {
                 self.drag_init_pos = None;
-                #[cfg(target_os = "linux")]
+                // #[cfg(target_os = "linux")]
                 {
                     self.resize_edge = None;
                     self.resize_init_screen_pos = None;
