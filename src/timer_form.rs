@@ -939,8 +939,8 @@ impl ResizeEdge {
         match self {
             Self::Left | Self::Right => Cursor::ResizeLeftRight,
             Self::Top | Self::Bottom => Cursor::ResizeUpDown,
-            Self::TopLeft | Self::BottomRight => Cursor::ResizeUpDown,
-            Self::TopRight | Self::BottomLeft => Cursor::ResizeLeftRight,
+            Self::TopLeft | Self::BottomRight => Cursor::Crosshair,
+            Self::TopRight | Self::BottomLeft => Cursor::Crosshair,
         }
     }
 }
