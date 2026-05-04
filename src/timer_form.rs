@@ -955,10 +955,6 @@ struct WindowInteractionController {
     /// The edge/corner being resized, if a resize is in progress.
     // #[cfg(target_os = "linux")]
     resize_edge: Option<ResizeEdge>,
-    /// Mouse position in screen coordinates at the time resize starts.
-    /// Only used for edges that move the window (left/top-anchored edges).
-    // #[cfg(target_os = "linux")]
-    resize_init_screen_pos: Option<Point>,
     /// Mouse position in window coordinates at the time resize starts.
     /// Used for edges that don't move the window (right/bottom-anchored edges).
     // #[cfg(target_os = "linux")]
@@ -986,8 +982,6 @@ impl WindowInteractionController {
             // #[cfg(target_os = "linux")]
             resize_edge: None,
             // #[cfg(target_os = "linux")]
-            resize_init_screen_pos: None,
-            // #[cfg(target_os = "linux")]
             resize_init_mouse_win_pos: None,
             // #[cfg(target_os = "linux")]
             resize_init_win_pos: None,
@@ -1012,10 +1006,9 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                     if let Some(edge) = ResizeEdge::get(me.window_pos, win_size) {
                         ctx.set_active(true);
                         self.resize_edge = Some(edge);
-                        self.resize_init_screen_pos = Some(Point::new(
-                            win_pos.x + me.window_pos.x,
-                            win_pos.y + me.window_pos.y,
-                        ));
+                        self.drag_old_pos.clear();
+                        self.drag_old_pos.push_front(win_pos);
+                        self.drag_init_pos = Some(me.window_pos);
                         self.resize_init_mouse_win_pos = Some(me.window_pos);
                         self.resize_init_win_pos = Some(win_pos);
                         self.resize_init_size = Some(win_size);
@@ -1044,13 +1037,13 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                     // #[cfg(target_os = "linux")]
                     let handled_as_resize = if let (
                         Some(edge),
-                        Some(init_screen),
+                        Some(init_pos),
                         Some(init_mouse_win),
                         Some(init_win),
                         Some(init_size),
                     ) = (
                         self.resize_edge,
-                        self.resize_init_screen_pos,
+                        self.drag_init_pos,
                         self.resize_init_mouse_win_pos,
                         self.resize_init_win_pos,
                         self.resize_init_size,
@@ -1071,19 +1064,42 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                             ResizeEdge::Top | ResizeEdge::TopLeft | ResizeEdge::TopRight
                         );
 
-                        let cur_pos = if needs_screen_x || needs_screen_y {
-                            Some(ctx.window().get_position())
-                        } else {
-                            None
-                        };
+                        let mut within_window_change = me.window_pos.to_vec2() - init_pos.to_vec2();
+                        match edge {
+                            ResizeEdge::Top | ResizeEdge::Bottom => within_window_change.x = 0.0,
+                            ResizeEdge::Left | ResizeEdge::Right => within_window_change.y = 0.0,
+                            _ => (),
+                        }
+                        let old_pos = ctx.window().get_position();
+                        self.drag_old_pos.truncate(DRAG_EVENT_BATCH_SIZE - 1);
+                        self.drag_old_pos.push_front(old_pos);
+                        let mut new_pos = old_pos + within_window_change; // old_pos + (me.window_pos - init_pos)
+                        // scan for a local minimum, not a global minimum
+                        for i in 0..self.drag_old_pos.len() {
+                            let old_a = self.drag_old_pos[i];
+                            let new_a = old_a + within_window_change;
+                            if let Some(&old_b) = self.drag_old_pos.get(i + 1) {
+                                let new_b = old_b + within_window_change;
+                                if new_b.distance(old_pos) < new_a.distance(old_pos) {
+                                    continue;
+                                } else {
+                                    new_pos = new_a;
+                                    self.drag_old_pos.truncate(i + 1);
+                                    break;
+                                }
+                            } else {
+                                new_pos = new_a;
+                                break;
+                            }
+                        }
 
                         let dx = if needs_screen_x {
-                            cur_pos.unwrap().x + me.window_pos.x - init_screen.x
+                            new_pos.x - init_win.x
                         } else {
                             me.window_pos.x - init_mouse_win.x
                         };
                         let dy = if needs_screen_y {
-                            cur_pos.unwrap().y + me.window_pos.y - init_screen.y
+                            new_pos.y - init_win.y
                         } else {
                             me.window_pos.y - init_mouse_win.y
                         };
@@ -1179,7 +1195,6 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                 // #[cfg(target_os = "linux")]
                 {
                     self.resize_edge = None;
-                    self.resize_init_screen_pos = None;
                     self.resize_init_mouse_win_pos = None;
                     self.resize_init_win_pos = None;
                     self.resize_init_size = None;
