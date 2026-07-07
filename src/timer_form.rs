@@ -959,9 +959,6 @@ struct WindowInteractionController {
     /// Used for edges that don't move the window (right/bottom-anchored edges).
     // #[cfg(target_os = "linux")]
     resize_init_mouse_win_pos: Option<Point>,
-    /// Window position at the time resize starts.
-    // #[cfg(target_os = "linux")]
-    resize_init_win_pos: Option<Point>,
     /// Window size at the time resize starts.
     // #[cfg(target_os = "linux")]
     resize_init_size: Option<Size>,
@@ -983,8 +980,6 @@ impl WindowInteractionController {
             resize_edge: None,
             // #[cfg(target_os = "linux")]
             resize_init_mouse_win_pos: None,
-            // #[cfg(target_os = "linux")]
-            resize_init_win_pos: None,
             // #[cfg(target_os = "linux")]
             resize_init_size: None,
             // #[cfg(target_os = "linux")]
@@ -1010,7 +1005,6 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                         self.drag_old_pos.push_front(win_pos);
                         self.drag_init_pos = Some(me.window_pos);
                         self.resize_init_mouse_win_pos = Some(me.window_pos);
-                        self.resize_init_win_pos = Some(win_pos);
                         self.resize_init_size = Some(win_size);
                         self.resize_last_pos = Some(win_pos);
                         self.resize_last_size = Some(win_size);
@@ -1039,13 +1033,11 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                         Some(edge),
                         Some(init_pos),
                         Some(init_mouse_win),
-                        Some(init_win),
                         Some(init_size),
                     ) = (
                         self.resize_edge,
                         self.drag_init_pos,
                         self.resize_init_mouse_win_pos,
-                        self.resize_init_win_pos,
                         self.resize_init_size,
                     ) {
                         ctx.set_cursor(&edge.cursor());
@@ -1071,6 +1063,7 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                             _ => (),
                         }
                         let old_pos = ctx.window().get_position();
+                        let old_size = ctx.window().get_size();
                         self.drag_old_pos.truncate(DRAG_EVENT_BATCH_SIZE - 1);
                         self.drag_old_pos.push_front(old_pos);
                         let mut new_pos = old_pos + within_window_change; // old_pos + (me.window_pos - init_pos)
@@ -1094,23 +1087,23 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                         }
 
                         let dx = if needs_screen_x {
-                            new_pos.x - init_win.x
+                            new_pos.x - old_pos.x
                         } else {
                             me.window_pos.x - init_mouse_win.x
                         };
                         let dy = if needs_screen_y {
-                            new_pos.y - init_win.y
+                            new_pos.y - old_pos.y
                         } else {
                             me.window_pos.y - init_mouse_win.y
                         };
 
-                        let mut new_pos = init_win;
+                        let mut new_pos = old_pos;
                         let mut new_size = init_size;
 
                         match edge {
                             ResizeEdge::Left | ResizeEdge::TopLeft | ResizeEdge::BottomLeft => {
                                 new_size.width = (init_size.width - dx).max(50.0);
-                                new_pos.x = init_win.x + (init_size.width - new_size.width);
+                                new_pos.x = old_pos.x + (init_size.width - new_size.width);
                             }
                             ResizeEdge::Right | ResizeEdge::TopRight | ResizeEdge::BottomRight => {
                                 new_size.width = (init_size.width + dx).max(50.0);
@@ -1121,7 +1114,7 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                         match edge {
                             ResizeEdge::Top | ResizeEdge::TopLeft | ResizeEdge::TopRight => {
                                 new_size.height = (init_size.height - dy).max(50.0);
-                                new_pos.y = init_win.y + (init_size.height - new_size.height);
+                                new_pos.y = old_pos.y + (init_size.height - new_size.height);
                             }
                             ResizeEdge::Bottom
                             | ResizeEdge::BottomLeft
@@ -1196,7 +1189,6 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
                 {
                     self.resize_edge = None;
                     self.resize_init_mouse_win_pos = None;
-                    self.resize_init_win_pos = None;
                     self.resize_init_size = None;
                     self.resize_last_pos = None;
                     self.resize_last_size = None;
