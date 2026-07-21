@@ -18,7 +18,7 @@ use druid::{
 };
 use livesplit_core::{
     component::{
-        splits::{ColumnStartWith, ColumnUpdateTrigger, ColumnUpdateWith},
+        splits::{ColumnStartWith, ColumnUpdateTrigger, ColumnUpdateWith, SubsplitDisplayMode},
         timer::DeltaGradient,
     },
     layout::LayoutDirection,
@@ -285,6 +285,7 @@ pub fn widget<T: ListIter<SettingsRow>>() -> impl Widget<T> {
                             ),
                             Value::DeltaGradient(_) => Box::new(delta_gradient()),
                             Value::ColumnKind(_) => Box::new(column_kind()),
+                            Value::SubsplitDisplayMode(_) => Box::new(subsplit_display_mode()),
                         },
                     ),
                     1.0,
@@ -328,6 +329,32 @@ fn column_kind() -> impl Widget<SettingsRow> {
                     *v = match value {
                         0 => ColumnKind::Time,
                         1 => ColumnKind::Variable,
+                        _ => return,
+                    };
+                }
+            },
+        ))
+        .expand_width()
+}
+
+fn subsplit_display_mode() -> impl Widget<SettingsRow> {
+    combo_box::static_list(&["Flat", "CurrentGroupExpanded", "AllGroupsExpanded"])
+        .lens(Identity.map(
+            |row: &SettingsRow| match &row.value {
+                Value::SubsplitDisplayMode(v) => match v {
+                    SubsplitDisplayMode::Flat => 0,
+                    SubsplitDisplayMode::CurrentGroupExpanded => 1,
+                    SubsplitDisplayMode::AllGroupsExpanded => 2,
+                },
+                // TODO: What
+                _ => 3,
+            },
+            |row: &mut SettingsRow, value: usize| {
+                if let Value::SubsplitDisplayMode(v) = &mut row.value {
+                    *v = match value {
+                        0 => SubsplitDisplayMode::Flat,
+                        1 => SubsplitDisplayMode::CurrentGroupExpanded,
+                        2 => SubsplitDisplayMode::AllGroupsExpanded,
                         _ => return,
                     };
                 }
