@@ -201,6 +201,7 @@ pub fn widget<T: ListIter<SettingsRow>>() -> impl Widget<T> {
                                     ))
                                     .expand_width(),
                             ),
+                            Value::OptionalUInt(_) => Box::new(optional_uint()),
                             Value::Alignment(_) => Box::new(
                                 combo_box::static_list(&["Automatic", "Left", "Center"])
                                     .lens(Identity.map(
@@ -1610,6 +1611,83 @@ fn optional_string() -> impl Widget<SettingsRow> {
                                 ))
                                 .expand_width(),
                         )
+                    }
+                    _ => Box::new(Flex::row()),
+                },
+            ),
+            1.0,
+        )
+}
+
+fn optional_uint() -> impl Widget<SettingsRow> {
+    Flex::row()
+        .with_child(
+            Switch::new()
+                .lens(Identity.map(
+                    |row: &SettingsRow| match &row.value {
+                        Value::OptionalUInt(v) => v.is_some(),
+                        // TODO: What
+                        _ => false,
+                    },
+                    |row: &mut SettingsRow, value: bool| {
+                        if let Value::OptionalUInt(v) = &mut row.value {
+                            if v.is_some() != value {
+                                // TODO: What
+                                *v = value.then_some(0);
+                            }
+                        }
+                    },
+                ))
+                .env_scope(|env, _| switch_style(env)),
+        )
+        .with_spacer(GRID_BORDER)
+        .with_flex_child(
+            ViewSwitcher::new(
+                |row: &SettingsRow, _| matches!(row.value, Value::OptionalUInt(Some(_))),
+                |_, row, _| match row.value {
+                    Value::OptionalUInt(Some(_)) => {
+                        Box::new(
+                            Flex::row()
+                                .with_flex_child(
+                                    formatted(
+                                        TextBox::new().with_text_alignment(TextAlignment::End),
+                                        |buf, val| {
+                                            use std::fmt::Write;
+                                            let _ = write!(buf, "{}", val);
+                                        },
+                                        |val| val.parse().ok(),
+                                    )
+                                    .lens(Identity.map(
+                                        |row: &SettingsRow| match row.value {
+                                            Value::OptionalUInt(Some(v)) => v,
+                                            // TODO: What
+                                            _ => 0,
+                                        },
+                                        |row: &mut SettingsRow, value: u64| {
+                                            if let Value::OptionalUInt(Some(v)) = &mut row.value {
+                                                *v = value;
+                                            }
+                                        },
+                                    ))
+                                    .expand_width(),
+                                    1.0,
+                                )
+                                .with_child(Stepper::new().with_range(0.0, 100_000.0).lens(
+                                    Identity.map(
+                                        |row: &SettingsRow| match row.value {
+                                            Value::OptionalUInt(Some(v)) => v as _,
+                                            // TODO: What
+                                            _ => 0.0,
+                                        },
+                                        |row: &mut SettingsRow, value: f64| {
+                                            if let Value::OptionalUInt(Some(v)) = &mut row.value {
+                                                *v = value as _;
+                                            }
+                                        },
+                                    ),
+                                ))
+                                .expand_width(),
+                            )
                     }
                     _ => Box::new(Flex::row()),
                 },
