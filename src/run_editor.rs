@@ -39,7 +39,7 @@ impl<T> SegmentWidget<T> {
 impl<T: Widget<Segment>> Widget<Segment> for SegmentWidget<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Segment, env: &Env) {
         if let Event::MouseDown(event) = event {
-            if !data.state.segments[data.index]
+            if !data.state.rows[data.index]
                 .selected
                 .is_selected_or_active()
             {
@@ -60,7 +60,7 @@ impl<T: Widget<Segment>> Widget<Segment> for SegmentWidget<T> {
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &Segment, env: &Env) {
         // if let &LifeCycle::FocusChanged(has_now_focus) = event {
-        //     let is_selected = data.state.segments[data.index]
+        //     let is_selected = data.state.rows[data.index]
         //         .selected
         //         .is_selected_or_active();
         //     if has_now_focus && !is_selected {
@@ -90,7 +90,7 @@ impl<T: Widget<Segment>> Widget<Segment> for SegmentWidget<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &Segment, env: &Env) {
         let rect = ctx.size().to_rect();
-        if data.state.segments[data.index]
+        if data.state.rows[data.index]
             .selected
             .is_selected_or_active()
         {
@@ -494,7 +494,7 @@ impl ListIter<Segment> for State {
     }
 
     fn data_len(&self) -> usize {
-        self.state.segments.len()
+        self.state.rows.len()
     }
 }
 
@@ -554,9 +554,9 @@ fn segments() -> impl Widget<State> {
                             .with_flex_child(
                                 TextBox::new()
                                     .lens(Identity.map(
-                                        |s: &Segment| s.state.segments[s.index].name.clone(),
+                                        |s: &Segment| s.state.rows[s.index].name.clone(),
                                         |state: &mut Segment, name: String| {
-                                            if name != state.state.segments[state.index].name {
+                                            if name != state.state.rows[state.index].name {
                                                 state.new_name = Some(name);
                                             }
                                         },
@@ -570,10 +570,10 @@ fn segments() -> impl Widget<State> {
                                     TextBox::new().with_text_alignment(TextAlignment::End),
                                 ))
                                 .lens(Identity.map(
-                                    |s: &Segment| s.state.segments[s.index].split_time.clone(),
+                                    |s: &Segment| s.state.rows[s.index].split_time.clone(),
                                     |state: &mut Segment, split_time: String| {
                                         if split_time
-                                            != state.state.segments[state.index].split_time
+                                            != state.state.rows[state.index].split_time
                                         {
                                             state.new_split_time = Some(split_time);
                                         }
@@ -587,10 +587,10 @@ fn segments() -> impl Widget<State> {
                                     TextBox::new().with_text_alignment(TextAlignment::End),
                                 ))
                                 .lens(Identity.map(
-                                    |s: &Segment| s.state.segments[s.index].segment_time.clone(),
+                                    |s: &Segment| s.state.rows[s.index].segment_time.clone(),
                                     |state: &mut Segment, segment_time: String| {
                                         if segment_time
-                                            != state.state.segments[state.index].segment_time
+                                            != state.state.rows[state.index].segment_time
                                         {
                                             state.new_segment_time = Some(segment_time);
                                         }
@@ -605,11 +605,11 @@ fn segments() -> impl Widget<State> {
                                 ))
                                 .lens(Identity.map(
                                     |s: &Segment| {
-                                        s.state.segments[s.index].best_segment_time.clone()
+                                        s.state.rows[s.index].best_segment_time.clone()
                                     },
                                     |state: &mut Segment, best_segment_time: String| {
                                         if best_segment_time
-                                            != state.state.segments[state.index].best_segment_time
+                                            != state.state.rows[state.index].best_segment_time
                                         {
                                             state.new_best_segment_time = Some(best_segment_time);
                                         }
