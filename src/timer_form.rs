@@ -1,17 +1,17 @@
 use std::{collections::VecDeque, path::Path, sync::Arc};
 
+#[cfg(target_os = "linux")]
+use druid::Cursor;
 use druid::{
     commands,
     menu::MenuEntry,
     piet::PietImage,
     theme,
     widget::{Controller, Flex},
-    AppDelegate, AppLauncher, BoxConstraints, DelegateCtx, Env, Event, EventCtx,
-    FileDialogOptions, FileInfo, FileSpec, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, MenuItem,
-    Point, Selector, Size, UpdateCtx, Widget, WidgetExt, WindowDesc, WindowId, WindowLevel,
+    AppDelegate, AppLauncher, BoxConstraints, DelegateCtx, Env, Event, EventCtx, FileDialogOptions,
+    FileInfo, FileSpec, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, MenuItem, Point, Selector, Size,
+    UpdateCtx, Widget, WidgetExt, WindowDesc, WindowId, WindowLevel,
 };
-#[cfg(target_os = "linux")]
-use druid::Cursor;
 use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
 
 #[cfg(feature = "auto-splitting")]

@@ -1714,7 +1714,7 @@ fn optional_uint() -> impl Widget<SettingsRow> {
                                     ),
                                 ))
                                 .expand_width(),
-                            )
+                        )
                     }
                     _ => Box::new(Flex::row()),
                 },

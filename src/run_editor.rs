@@ -12,7 +12,11 @@ use druid::{
     LinearGradient, Menu, MenuItem, PaintCtx, RenderContext, Selector, Size, TextAlignment,
     UnitPoint, UpdateCtx, Widget, WidgetExt,
 };
-use livesplit_core::{run::editor::{self, RowState}, settings::ImageCache, RunEditor, TimeSpan, TimingMethod};
+use livesplit_core::{
+    run::editor::{self, RowState},
+    settings::ImageCache,
+    RunEditor, TimeSpan, TimingMethod,
+};
 
 use crate::{
     config::Config,
@@ -39,8 +43,7 @@ impl<T> RowWidget<T> {
 impl<T: Widget<RowT>> Widget<RowT> for RowWidget<T> {
     fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut RowT, env: &Env) {
         if let Event::MouseDown(event) = event {
-            if !row_state_selected_or_active(&data.state.rows[data.row_index])
-            {
+            if !row_state_selected_or_active(&data.state.rows[data.row_index]) {
                 ctx.request_focus();
                 if event.mods.shift() {
                     data.select_range = true;
@@ -76,20 +79,13 @@ impl<T: Widget<RowT>> Widget<RowT> for RowWidget<T> {
         self.inner.update(ctx, old_data, data, env)
     }
 
-    fn layout(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &RowT,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &RowT, env: &Env) -> Size {
         self.inner.layout(ctx, bc, data, env)
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &RowT, env: &Env) {
         let rect = ctx.size().to_rect();
-        if row_state_selected_or_active(&data.state.rows[data.row_index])
-        {
+        if row_state_selected_or_active(&data.state.rows[data.row_index]) {
             ctx.fill(
                 rect,
                 &LinearGradient::new(
@@ -558,9 +554,15 @@ fn rows() -> impl Widget<State> {
                             .with_flex_child(
                                 TextBox::new()
                                     .lens(Identity.map(
-                                        |s: &RowT| row_state_name(&s.state.rows[s.row_index]).clone(),
+                                        |s: &RowT| {
+                                            row_state_name(&s.state.rows[s.row_index]).clone()
+                                        },
                                         |state: &mut RowT, name: String| {
-                                            if &name != row_state_name(&state.state.rows[state.row_index]) {
+                                            if &name
+                                                != row_state_name(
+                                                    &state.state.rows[state.row_index],
+                                                )
+                                            {
                                                 state.new_name = Some(name);
                                             }
                                         },
@@ -574,11 +576,14 @@ fn rows() -> impl Widget<State> {
                                     TextBox::new().with_text_alignment(TextAlignment::End),
                                 ))
                                 .lens(Identity.map(
-                                    |s: &RowT| row_state_split_time(&s.state.rows[s.row_index]).to_string(),
+                                    |s: &RowT| {
+                                        row_state_split_time(&s.state.rows[s.row_index]).to_string()
+                                    },
                                     |state: &mut RowT, split_time: String| {
-                                        if let RowState::Segment(s) = &state.state.rows[state.row_index] {
-                                            if split_time != s.split_time
-                                            {
+                                        if let RowState::Segment(s) =
+                                            &state.state.rows[state.row_index]
+                                        {
+                                            if split_time != s.split_time {
                                                 state.new_split_time = Some(split_time);
                                             }
                                         }
@@ -592,11 +597,15 @@ fn rows() -> impl Widget<State> {
                                     TextBox::new().with_text_alignment(TextAlignment::End),
                                 ))
                                 .lens(Identity.map(
-                                    |s: &RowT| row_state_segment_time(&s.state.rows[s.row_index]).to_string(),
+                                    |s: &RowT| {
+                                        row_state_segment_time(&s.state.rows[s.row_index])
+                                            .to_string()
+                                    },
                                     |state: &mut RowT, segment_time: String| {
-                                        if let RowState::Segment(s) = &state.state.rows[state.row_index] {
-                                            if segment_time != s.segment_time
-                                            {
+                                        if let RowState::Segment(s) =
+                                            &state.state.rows[state.row_index]
+                                        {
+                                            if segment_time != s.segment_time {
                                                 state.new_segment_time = Some(segment_time);
                                             }
                                         }
@@ -611,13 +620,16 @@ fn rows() -> impl Widget<State> {
                                 ))
                                 .lens(Identity.map(
                                     |s: &RowT| {
-                                        row_state_best_segment_time(&s.state.rows[s.row_index]).to_string()
+                                        row_state_best_segment_time(&s.state.rows[s.row_index])
+                                            .to_string()
                                     },
                                     |state: &mut RowT, best_segment_time: String| {
-                                        if let RowState::Segment(s) = &state.state.rows[state.row_index] {
-                                            if best_segment_time != s.best_segment_time
-                                            {
-                                                state.new_best_segment_time = Some(best_segment_time);
+                                        if let RowState::Segment(s) =
+                                            &state.state.rows[state.row_index]
+                                        {
+                                            if best_segment_time != s.best_segment_time {
+                                                state.new_best_segment_time =
+                                                    Some(best_segment_time);
                                             }
                                         }
                                     },
