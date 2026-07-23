@@ -589,8 +589,11 @@ impl ListIter<RowT> for State {
                     RowState::Segment(s) => {
                         editor.select_additionally(s.segment_index);
                     }
-                    RowState::SegmentGroup(_) => {
-                        // TODO: how to select a group additionally?
+                    RowState::SegmentGroup(g) => {
+                        // to select a group additionally, toggle selection if not already selected
+                        if !g.selected {
+                            editor.toggle_segment_group_selection(g.group_index).ok();
+                        }
                     }
                 }
                 row.select_additionally = false;
@@ -613,8 +616,11 @@ impl ListIter<RowT> for State {
                     RowState::Segment(s) => {
                         editor.unselect(s.segment_index);
                     }
-                    RowState::SegmentGroup(_) => {
-                        // TODO: how to unselect a group?
+                    RowState::SegmentGroup(g) => {
+                        // to unselect a group, toggle selection if already selected
+                        if g.selected {
+                            editor.toggle_segment_group_selection(g.group_index).ok();
+                        }
                     }
                 }
                 row.unselect = false;
