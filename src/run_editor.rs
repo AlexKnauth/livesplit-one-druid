@@ -448,61 +448,106 @@ impl ListIter<RowT> for State {
         let editor = editor.as_mut().unwrap();
         let mut changed = false;
 
-        for index in 0..self.data_len() {
-            row.row_index = index;
-            cb(&mut row, index);
+        for row_index in 0..self.data_len() {
+            row.row_index = row_index;
+            cb(&mut row, row_index);
             if let Some(new_name) = row.new_name.take() {
-                // TODO: is this a row index, or a segment index? because those are different now
-                editor.select_only(index);
-                editor.active_segment().set_name(new_name);
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_only(s.segment_index);
+                        editor.active_segment().set_name(new_name);
+                    }
+                    RowState::SegmentGroup(g) => {
+                        editor.select_segment_group(g.group_index).ok();
+                        editor.rename_segment_group(g.group_index, Some(new_name)).ok();
+                    }
+                }
                 changed = true;
             }
             if let Some(new_split_time) = row.new_split_time.take() {
-                // TODO: is this a row index, or a segment index? because those are different now
-                editor.select_only(index);
-                let _ = editor
-                    .active_segment()
-                    .parse_and_set_split_time(&new_split_time, livesplit_core::Lang::English);
-                changed = true;
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_only(s.segment_index);
+                        editor
+                            .active_segment()
+                            .parse_and_set_split_time(&new_split_time, livesplit_core::Lang::English)
+                            .ok();
+                        changed = true;
+                    }
+                    RowState::SegmentGroup(_) => (),
+                }
             }
             if let Some(new_segment_time) = row.new_segment_time.take() {
-                // TODO: is this a row index, or a segment index? because those are different now
-                editor.select_only(index);
-                let _ = editor
-                    .active_segment()
-                    .parse_and_set_segment_time(&new_segment_time, livesplit_core::Lang::English);
-                changed = true;
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_only(s.segment_index);
+                        editor
+                            .active_segment()
+                            .parse_and_set_segment_time(&new_segment_time, livesplit_core::Lang::English)
+                            .ok();
+                        changed = true;
+                    }
+                    RowState::SegmentGroup(_) => (),
+                }
             }
             if let Some(new_best_segment_time) = row.new_best_segment_time.take() {
-                // TODO: is this a row index, or a segment index? because those are different now
-                editor.select_only(index);
-                let _ = editor.active_segment().parse_and_set_best_segment_time(
-                    &new_best_segment_time,
-                    livesplit_core::Lang::English,
-                );
-                changed = true;
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_only(s.segment_index);
+                        editor.active_segment().parse_and_set_best_segment_time(
+                            &new_best_segment_time,
+                            livesplit_core::Lang::English,
+                        ).ok();
+                        changed = true;
+                    }
+                    RowState::SegmentGroup(_) => (),
+                }
             }
             if row.select_only {
-                // TODO: is this a row index, or a segment index? because those are different now
-                editor.select_only(index);
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_only(s.segment_index);
+                    }
+                    RowState::SegmentGroup(g) => {
+                        editor.select_segment_group(g.group_index).ok();
+                    }
+                }
                 row.select_only = false;
                 changed = true;
             }
             if row.select_additionally {
-                // TODO: is this a row index, or a segment index? because those are different now
-                editor.select_additionally(index);
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_additionally(s.segment_index);
+                    }
+                    RowState::SegmentGroup(_) => {
+                        // TODO: how to select a group additionally?
+                    }
+                }
                 row.select_additionally = false;
                 changed = true;
             }
             if row.select_range {
-                // TODO: is this a row index, or a segment index? because those are different now
-                editor.select_range(index);
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_range(s.segment_index);
+                    }
+                    RowState::SegmentGroup(g) => {
+                        editor.select_segment_group_range(g.group_index).ok();
+                    }
+                }
                 row.select_range = false;
                 changed = true;
             }
             if row.unselect {
-                // TODO: is this a row index, or a segment index? because those are different now
-                editor.unselect(index);
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.unselect(s.segment_index);
+                    }
+                    RowState::SegmentGroup(_) => {
+                        // TODO: how to unselect a group?
+                    }
+                }
                 row.unselect = false;
                 changed = true;
             }
