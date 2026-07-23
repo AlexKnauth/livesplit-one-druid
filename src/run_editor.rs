@@ -390,7 +390,9 @@ fn side_buttons() -> impl Widget<State> {
                 .on_click(|_, state: &mut State, _| {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
-                    editor.create_segment_group_from_selection::<&str>(None).ok();
+                    editor
+                        .create_segment_group_from_selection::<&str>(None)
+                        .ok();
                     // image cache stuff common to all of these
                     state.state = Rc::new(editor.state(
                         &mut state.image_cache.borrow_mut(),
@@ -474,7 +476,9 @@ impl ListIter<RowT> for State {
                     }
                     RowState::SegmentGroup(g) => {
                         editor.select_segment_group(g.group_index).ok();
-                        editor.rename_segment_group(g.group_index, Some(new_name)).ok();
+                        editor
+                            .rename_segment_group(g.group_index, Some(new_name))
+                            .ok();
                     }
                 }
                 changed = true;
@@ -485,7 +489,10 @@ impl ListIter<RowT> for State {
                         editor.select_only(s.segment_index);
                         editor
                             .active_segment()
-                            .parse_and_set_split_time(&new_split_time, livesplit_core::Lang::English)
+                            .parse_and_set_split_time(
+                                &new_split_time,
+                                livesplit_core::Lang::English,
+                            )
                             .ok();
                         changed = true;
                     }
@@ -498,7 +505,10 @@ impl ListIter<RowT> for State {
                         editor.select_only(s.segment_index);
                         editor
                             .active_segment()
-                            .parse_and_set_segment_time(&new_segment_time, livesplit_core::Lang::English)
+                            .parse_and_set_segment_time(
+                                &new_segment_time,
+                                livesplit_core::Lang::English,
+                            )
                             .ok();
                         changed = true;
                     }
@@ -509,10 +519,13 @@ impl ListIter<RowT> for State {
                 match &row.state.rows[row_index] {
                     RowState::Segment(s) => {
                         editor.select_only(s.segment_index);
-                        editor.active_segment().parse_and_set_best_segment_time(
-                            &new_best_segment_time,
-                            livesplit_core::Lang::English,
-                        ).ok();
+                        editor
+                            .active_segment()
+                            .parse_and_set_best_segment_time(
+                                &new_best_segment_time,
+                                livesplit_core::Lang::English,
+                            )
+                            .ok();
                         changed = true;
                     }
                     RowState::SegmentGroup(_) => (),
