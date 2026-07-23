@@ -3,6 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use druid::{
     commands,
     lens::Identity,
+    piet::{Text, TextLayout, TextLayoutBuilder},
     theme,
     widget::{
         Button, ClipBox, Container, CrossAxisAlignment, Flex, Label, List, ListIter, Painter,
@@ -85,7 +86,8 @@ impl<T: Widget<RowT>> Widget<RowT> for RowWidget<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &RowT, env: &Env) {
         let rect = ctx.size().to_rect();
-        if row_state_selected_or_active(&data.state.rows[data.row_index]) {
+        let row_state = &data.state.rows[data.row_index];
+        if row_state_selected_or_active(row_state) {
             ctx.fill(
                 rect,
                 &LinearGradient::new(
@@ -101,6 +103,38 @@ impl<T: Widget<RowT>> Widget<RowT> for RowWidget<T> {
                 Color::grey8(0xb)
             };
             ctx.fill(rect, &color);
+        }
+        match row_state {
+            RowState::Segment(s) => {
+                if s.is_indented {
+                    if let Ok(l) = ctx
+                        .text()
+                        .new_text_layout(" -")
+                        .text_color(Color::WHITE)
+                        .build()
+                    {
+                        let y = l
+                            .line_metric(0)
+                            .map(|m| (ctx.size().height - m.height) / 2.0)
+                            .unwrap_or_default();
+                        ctx.draw_text(&l, (0.0, y));
+                    }
+                }
+            }
+            RowState::SegmentGroup(_) => {
+                if let Ok(l) = ctx
+                    .text()
+                    .new_text_layout("▾")
+                    .text_color(Color::WHITE)
+                    .build()
+                {
+                    let y = l
+                        .line_metric(0)
+                        .map(|m| (ctx.size().height - m.height) / 2.0)
+                        .unwrap_or_default();
+                    ctx.draw_text(&l, (0.0, y));
+                }
+            }
         }
         self.inner.paint(ctx, data, env)
     }
