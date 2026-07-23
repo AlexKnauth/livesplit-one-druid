@@ -382,14 +382,24 @@ fn side_buttons() -> impl Widget<State> {
         .with_spacer(BUTTON_SPACING)
         .with_child(
             Button::new("Create Group")
-                .on_click(|_, state: &mut State, _| todo!())
+                .on_click(|_, state: &mut State, _| {
+                    let mut editor = state.editor.borrow_mut();
+                    let editor = editor.as_mut().unwrap();
+                    editor.create_segment_group_from_selection::<&str>(None).ok();
+                    // TODO: is that image cache stuff needed here?
+                })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
         )
         .with_spacer(BUTTON_SPACING)
         .with_child(
             Button::new("Remove Group")
-                .on_click(|_, state: &mut State, _| todo!())
+                .on_click(|_, state: &mut State, _| {
+                    let mut editor = state.editor.borrow_mut();
+                    let editor = editor.as_mut().unwrap();
+                    editor.remove_selected_segment_groups().ok();
+                    // TODO: is that image cache stuff needed here?
+                })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
         )
