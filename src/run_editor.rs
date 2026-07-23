@@ -380,6 +380,20 @@ fn side_buttons() -> impl Widget<State> {
                 .fix_height(BUTTON_HEIGHT),
         )
         .with_spacer(BUTTON_SPACING)
+        .with_child(
+            Button::new("Create Group")
+                .on_click(|_, state: &mut State, _| todo!())
+                .expand_width()
+                .fix_height(BUTTON_HEIGHT),
+        )
+        .with_spacer(BUTTON_SPACING)
+        .with_child(
+            Button::new("Remove Group")
+                .on_click(|_, state: &mut State, _| todo!())
+                .expand_width()
+                .fix_height(BUTTON_HEIGHT),
+        )
+        .with_spacer(BUTTON_SPACING)
         .with_child(OtherButtonWidget::new(
             Button::new("Other...")
                 .expand_width()
