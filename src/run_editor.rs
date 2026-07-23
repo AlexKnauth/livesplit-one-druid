@@ -53,8 +53,15 @@ impl<T: Widget<RowT>> Widget<RowT> for RowWidget<T> {
                 } else {
                     data.select_only = true;
                 }
-            } else if event.mods.ctrl() {
-                data.unselect = true;
+            } else {
+                if event.mods.shift() {
+                    // already selected, do nothing
+                } else if event.mods.ctrl() {
+                    data.unselect = true;
+                } else {
+                    ctx.request_focus();
+                    data.select_only = true;
+                }
             }
         }
         self.inner.event(ctx, event, data, env)
