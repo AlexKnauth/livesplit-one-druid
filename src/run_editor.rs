@@ -306,6 +306,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.insert_segment_above();
+                    // image cache stuff common to all of these
                     state.state = Rc::new(editor.state(
                         &mut state.image_cache.borrow_mut(),
                         livesplit_core::Lang::English,
@@ -322,6 +323,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.insert_segment_below();
+                    // image cache stuff common to all of these
                     state.state = Rc::new(editor.state(
                         &mut state.image_cache.borrow_mut(),
                         livesplit_core::Lang::English,
@@ -338,6 +340,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.remove_segments();
+                    // image cache stuff common to all of these
                     state.state = Rc::new(editor.state(
                         &mut state.image_cache.borrow_mut(),
                         livesplit_core::Lang::English,
@@ -354,6 +357,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.move_segments_up();
+                    // image cache stuff common to all of these
                     state.state = Rc::new(editor.state(
                         &mut state.image_cache.borrow_mut(),
                         livesplit_core::Lang::English,
@@ -370,6 +374,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.move_segments_down();
+                    // image cache stuff common to all of these
                     state.state = Rc::new(editor.state(
                         &mut state.image_cache.borrow_mut(),
                         livesplit_core::Lang::English,
@@ -386,7 +391,12 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.create_segment_group_from_selection::<&str>(None).ok();
-                    // TODO: is that image cache stuff needed here?
+                    // image cache stuff common to all of these
+                    state.state = Rc::new(editor.state(
+                        &mut state.image_cache.borrow_mut(),
+                        livesplit_core::Lang::English,
+                    ));
+                    state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
@@ -398,7 +408,12 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.remove_selected_segment_groups().ok();
-                    // TODO: is that image cache stuff needed here?
+                    // image cache stuff common to all of these
+                    state.state = Rc::new(editor.state(
+                        &mut state.image_cache.borrow_mut(),
+                        livesplit_core::Lang::English,
+                    ));
+                    state.image_cache.borrow_mut().collect();
                 })
                 .expand_width()
                 .fix_height(BUTTON_HEIGHT),
