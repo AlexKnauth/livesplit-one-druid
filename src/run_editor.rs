@@ -569,7 +569,7 @@ fn rows() -> impl Widget<State> {
                                 TextBox::new()
                                     .lens(Identity.map(
                                         |s: &RowT| {
-                                            row_state_name(&s.state.rows[s.row_index]).clone()
+                                            row_state_name(&s.state.rows[s.row_index]).to_string()
                                         },
                                         |state: &mut RowT, name: String| {
                                             if &name
@@ -968,7 +968,7 @@ fn row_state_selected_or_active(r: &RowState) -> bool {
     }
 }
 
-fn row_state_name(r: &RowState) -> &String {
+fn row_state_name(r: &RowState) -> &str {
     match r {
         RowState::Segment(s) => &s.name,
         RowState::SegmentGroup(g) => &g.name,
