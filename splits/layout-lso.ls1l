@@ -52,7 +52,7 @@
                 "visual_split_count": 16,
                 "split_preview_count": 1,
                 "show_thin_separators": true,
-                "separator_last_split": true,
+                "show_gap_separators": true,
                 "always_show_last_split": true,
                 "fill_with_blank_space": true,
                 "display_two_rows": false,
@@ -77,6 +77,7 @@
                 "delta_time_accuracy": "Tenths",
                 "delta_drop_decimals": true,
                 "show_column_labels": false,
+                "subsplit_display_mode": "CurrentGroupExpanded",
                 "columns": [
                     {
                         "name": "Time",
@@ -186,6 +187,12 @@
         "timer_font": null,
         "times_font": null,
         "text_font": null,
+        "text_shadow": [
+            0.0,
+            0.0,
+            0.0,
+            0.5
+        ],
         "background": {
             "Plain": [
                 0.06,
