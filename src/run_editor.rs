@@ -3,6 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use druid::{
     commands,
     lens::Identity,
+    piet::{Text, TextLayout, TextLayoutBuilder},
     theme,
     widget::{
         Button, ClipBox, Container, CrossAxisAlignment, Flex, Label, List, ListIter, Painter,
@@ -12,7 +13,11 @@ use druid::{
     LinearGradient, Menu, MenuItem, PaintCtx, RenderContext, Selector, Size, TextAlignment,
     UnitPoint, UpdateCtx, Widget, WidgetExt,
 };
-use livesplit_core::{run::editor, settings::ImageCache, RunEditor, TimeSpan, TimingMethod};
+use livesplit_core::{
+    run::editor::{self, RowState},
+    settings::ImageCache,
+    RunEditor, TimeSpan, TimingMethod,
+};
 
 use crate::{
     config::Config,
@@ -26,23 +31,20 @@ use crate::{
     MainState,
 };
 
-struct SegmentWidget<T> {
+struct RowWidget<T> {
     inner: T,
 }
 
-impl<T> SegmentWidget<T> {
+impl<T> RowWidget<T> {
     fn new(inner: T) -> Self {
         Self { inner }
     }
 }
 
-impl<T: Widget<Segment>> Widget<Segment> for SegmentWidget<T> {
-    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut Segment, env: &Env) {
+impl<T: Widget<RowT>> Widget<RowT> for RowWidget<T> {
+    fn event(&mut self, ctx: &mut EventCtx, event: &Event, data: &mut RowT, env: &Env) {
         if let Event::MouseDown(event) = event {
-            if !data.state.segments[data.index]
-                .selected
-                .is_selected_or_active()
-            {
+            if !row_state_selected_or_active(&data.state.rows[data.row_index]) {
                 ctx.request_focus();
                 if event.mods.shift() {
                     data.select_range = true;
@@ -51,16 +53,23 @@ impl<T: Widget<Segment>> Widget<Segment> for SegmentWidget<T> {
                 } else {
                     data.select_only = true;
                 }
-            } else if event.mods.ctrl() {
-                data.unselect = true;
+            } else {
+                if event.mods.shift() {
+                    // already selected, do nothing
+                } else if event.mods.ctrl() {
+                    data.unselect = true;
+                } else {
+                    ctx.request_focus();
+                    data.select_only = true;
+                }
             }
         }
         self.inner.event(ctx, event, data, env)
     }
 
-    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &Segment, env: &Env) {
+    fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, data: &RowT, env: &Env) {
         // if let &LifeCycle::FocusChanged(has_now_focus) = event {
-        //     let is_selected = data.state.segments[data.index]
+        //     let is_selected = data.state.rows[data.index]
         //         .selected
         //         .is_selected_or_active();
         //     if has_now_focus && !is_selected {
@@ -70,7 +79,7 @@ impl<T: Widget<Segment>> Widget<Segment> for SegmentWidget<T> {
         self.inner.lifecycle(ctx, event, data, env)
     }
 
-    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &Segment, data: &Segment, env: &Env) {
+    fn update(&mut self, ctx: &mut UpdateCtx, old_data: &RowT, data: &RowT, env: &Env) {
         // TODO: We honestly really only need to care about its selected state
         if !old_data.same(data) {
             ctx.request_paint();
@@ -78,22 +87,14 @@ impl<T: Widget<Segment>> Widget<Segment> for SegmentWidget<T> {
         self.inner.update(ctx, old_data, data, env)
     }
 
-    fn layout(
-        &mut self,
-        ctx: &mut LayoutCtx,
-        bc: &BoxConstraints,
-        data: &Segment,
-        env: &Env,
-    ) -> Size {
+    fn layout(&mut self, ctx: &mut LayoutCtx, bc: &BoxConstraints, data: &RowT, env: &Env) -> Size {
         self.inner.layout(ctx, bc, data, env)
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx, data: &Segment, env: &Env) {
+    fn paint(&mut self, ctx: &mut PaintCtx, data: &RowT, env: &Env) {
         let rect = ctx.size().to_rect();
-        if data.state.segments[data.index]
-            .selected
-            .is_selected_or_active()
-        {
+        let row_state = &data.state.rows[data.row_index];
+        if row_state_selected_or_active(row_state) {
             ctx.fill(
                 rect,
                 &LinearGradient::new(
@@ -103,12 +104,44 @@ impl<T: Widget<Segment>> Widget<Segment> for SegmentWidget<T> {
                 ),
             );
         } else {
-            let color = if data.index & 1 == 0 {
+            let color = if data.row_index & 1 == 0 {
                 Color::grey8(0x12)
             } else {
                 Color::grey8(0xb)
             };
             ctx.fill(rect, &color);
+        }
+        match row_state {
+            RowState::Segment(s) => {
+                if s.is_indented {
+                    if let Ok(l) = ctx
+                        .text()
+                        .new_text_layout(" -")
+                        .text_color(Color::WHITE)
+                        .build()
+                    {
+                        let y = l
+                            .line_metric(0)
+                            .map(|m| (ctx.size().height - m.height) / 2.0)
+                            .unwrap_or_default();
+                        ctx.draw_text(&l, (0.0, y));
+                    }
+                }
+            }
+            RowState::SegmentGroup(_) => {
+                if let Ok(l) = ctx
+                    .text()
+                    .new_text_layout("▾")
+                    .text_color(Color::WHITE)
+                    .build()
+                {
+                    let y = l
+                        .line_metric(0)
+                        .map(|m| (ctx.size().height - m.height) / 2.0)
+                        .unwrap_or_default();
+                    ctx.draw_text(&l, (0.0, y));
+                }
+            }
         }
         self.inner.paint(ctx, data, env)
     }
@@ -314,6 +347,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.insert_segment_above();
+                    // image cache stuff common to all of these
                     state.state = Rc::new(editor.state(
                         &mut state.image_cache.borrow_mut(),
                         livesplit_core::Lang::English,
@@ -330,6 +364,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.insert_segment_below();
+                    // image cache stuff common to all of these
                     state.state = Rc::new(editor.state(
                         &mut state.image_cache.borrow_mut(),
                         livesplit_core::Lang::English,
@@ -346,6 +381,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.remove_segments();
+                    // image cache stuff common to all of these
                     state.state = Rc::new(editor.state(
                         &mut state.image_cache.borrow_mut(),
                         livesplit_core::Lang::English,
@@ -362,6 +398,7 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.move_segments_up();
+                    // image cache stuff common to all of these
                     state.state = Rc::new(editor.state(
                         &mut state.image_cache.borrow_mut(),
                         livesplit_core::Lang::English,
@@ -378,6 +415,43 @@ fn side_buttons() -> impl Widget<State> {
                     let mut editor = state.editor.borrow_mut();
                     let editor = editor.as_mut().unwrap();
                     editor.move_segments_down();
+                    // image cache stuff common to all of these
+                    state.state = Rc::new(editor.state(
+                        &mut state.image_cache.borrow_mut(),
+                        livesplit_core::Lang::English,
+                    ));
+                    state.image_cache.borrow_mut().collect();
+                })
+                .expand_width()
+                .fix_height(BUTTON_HEIGHT),
+        )
+        .with_spacer(BUTTON_SPACING)
+        .with_child(
+            Button::new("Create Group")
+                .on_click(|_, state: &mut State, _| {
+                    let mut editor = state.editor.borrow_mut();
+                    let editor = editor.as_mut().unwrap();
+                    editor
+                        .create_segment_group_from_selection::<&str>(None)
+                        .ok();
+                    // image cache stuff common to all of these
+                    state.state = Rc::new(editor.state(
+                        &mut state.image_cache.borrow_mut(),
+                        livesplit_core::Lang::English,
+                    ));
+                    state.image_cache.borrow_mut().collect();
+                })
+                .expand_width()
+                .fix_height(BUTTON_HEIGHT),
+        )
+        .with_spacer(BUTTON_SPACING)
+        .with_child(
+            Button::new("Remove Group")
+                .on_click(|_, state: &mut State, _| {
+                    let mut editor = state.editor.borrow_mut();
+                    let editor = editor.as_mut().unwrap();
+                    editor.remove_selected_segment_groups().ok();
+                    // image cache stuff common to all of these
                     state.state = Rc::new(editor.state(
                         &mut state.image_cache.borrow_mut(),
                         livesplit_core::Lang::English,
@@ -395,10 +469,10 @@ fn side_buttons() -> impl Widget<State> {
         ))
 }
 
-impl ListIter<Segment> for State {
-    fn for_each(&self, mut cb: impl FnMut(&Segment, usize)) {
-        let mut segment = Segment {
-            index: 0,
+impl ListIter<RowT> for State {
+    fn for_each(&self, mut cb: impl FnMut(&RowT, usize)) {
+        let mut row = RowT {
+            row_index: 0,
             state: self.state.clone(),
             new_name: None,
             new_split_time: None,
@@ -410,14 +484,14 @@ impl ListIter<Segment> for State {
             unselect: false,
         };
         for index in 0..self.data_len() {
-            segment.index = index;
-            cb(&segment, index);
+            row.row_index = index;
+            cb(&row, index);
         }
     }
 
-    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut Segment, usize)) {
-        let mut segment = Segment {
-            index: 0,
+    fn for_each_mut(&mut self, mut cb: impl FnMut(&mut RowT, usize)) {
+        let mut row = RowT {
+            row_index: 0,
             state: self.state.clone(),
             new_name: None,
             new_split_time: None,
@@ -432,54 +506,124 @@ impl ListIter<Segment> for State {
         let editor = editor.as_mut().unwrap();
         let mut changed = false;
 
-        for index in 0..self.data_len() {
-            segment.index = index;
-            cb(&mut segment, index);
-            if let Some(new_name) = segment.new_name.take() {
-                editor.select_only(index);
-                editor.active_segment().set_name(new_name);
+        for row_index in 0..self.data_len() {
+            row.row_index = row_index;
+            cb(&mut row, row_index);
+            if let Some(new_name) = row.new_name.take() {
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_only(s.segment_index);
+                        editor.active_segment().set_name(new_name);
+                    }
+                    RowState::SegmentGroup(g) => {
+                        editor.select_segment_group(g.group_index).ok();
+                        editor
+                            .rename_segment_group(g.group_index, Some(new_name))
+                            .ok();
+                    }
+                }
                 changed = true;
             }
-            if let Some(new_split_time) = segment.new_split_time.take() {
-                editor.select_only(index);
-                let _ = editor
-                    .active_segment()
-                    .parse_and_set_split_time(&new_split_time, livesplit_core::Lang::English);
+            if let Some(new_split_time) = row.new_split_time.take() {
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_only(s.segment_index);
+                        editor
+                            .active_segment()
+                            .parse_and_set_split_time(
+                                &new_split_time,
+                                livesplit_core::Lang::English,
+                            )
+                            .ok();
+                        changed = true;
+                    }
+                    RowState::SegmentGroup(_) => (),
+                }
+            }
+            if let Some(new_segment_time) = row.new_segment_time.take() {
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_only(s.segment_index);
+                        editor
+                            .active_segment()
+                            .parse_and_set_segment_time(
+                                &new_segment_time,
+                                livesplit_core::Lang::English,
+                            )
+                            .ok();
+                        changed = true;
+                    }
+                    RowState::SegmentGroup(_) => (),
+                }
+            }
+            if let Some(new_best_segment_time) = row.new_best_segment_time.take() {
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_only(s.segment_index);
+                        editor
+                            .active_segment()
+                            .parse_and_set_best_segment_time(
+                                &new_best_segment_time,
+                                livesplit_core::Lang::English,
+                            )
+                            .ok();
+                        changed = true;
+                    }
+                    RowState::SegmentGroup(_) => (),
+                }
+            }
+            if row.select_only {
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_only(s.segment_index);
+                    }
+                    RowState::SegmentGroup(g) => {
+                        editor.select_segment_group(g.group_index).ok();
+                    }
+                }
+                row.select_only = false;
                 changed = true;
             }
-            if let Some(new_segment_time) = segment.new_segment_time.take() {
-                editor.select_only(index);
-                let _ = editor
-                    .active_segment()
-                    .parse_and_set_segment_time(&new_segment_time, livesplit_core::Lang::English);
+            if row.select_additionally {
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_additionally(s.segment_index);
+                    }
+                    RowState::SegmentGroup(g) => {
+                        // to select a group additionally, toggle selection if not already selected
+                        if !g.selected {
+                            editor.toggle_segment_group_selection(g.group_index).ok();
+                        }
+                    }
+                }
+                row.select_additionally = false;
                 changed = true;
             }
-            if let Some(new_best_segment_time) = segment.new_best_segment_time.take() {
-                editor.select_only(index);
-                let _ = editor.active_segment().parse_and_set_best_segment_time(
-                    &new_best_segment_time,
-                    livesplit_core::Lang::English,
-                );
+            if row.select_range {
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.select_range(s.segment_index);
+                    }
+                    RowState::SegmentGroup(g) => {
+                        editor.select_segment_group_range(g.group_index).ok();
+                    }
+                }
+                row.select_range = false;
                 changed = true;
             }
-            if segment.select_only {
-                editor.select_only(index);
-                segment.select_only = false;
-                changed = true;
-            }
-            if segment.select_additionally {
-                editor.select_additionally(index);
-                segment.select_additionally = false;
-                changed = true;
-            }
-            if segment.select_range {
-                editor.select_range(index);
-                segment.select_range = false;
-                changed = true;
-            }
-            if segment.unselect {
-                editor.unselect(index);
-                segment.unselect = false;
+            if row.unselect {
+                match &row.state.rows[row_index] {
+                    RowState::Segment(s) => {
+                        editor.unselect(s.segment_index);
+                    }
+                    RowState::SegmentGroup(g) => {
+                        // to unselect a group, toggle selection if already selected
+                        if g.selected {
+                            editor.toggle_segment_group_selection(g.group_index).ok();
+                        }
+                    }
+                }
+                row.unselect = false;
                 changed = true;
             }
         }
@@ -494,13 +638,13 @@ impl ListIter<Segment> for State {
     }
 
     fn data_len(&self) -> usize {
-        self.state.segments.len()
+        self.state.rows.len()
     }
 }
 
 #[derive(Clone, Data)]
-struct Segment {
-    index: usize,
+struct RowT {
+    row_index: usize,
     state: Rc<editor::State>,
     new_name: Option<String>,
     new_split_time: Option<String>,
@@ -512,7 +656,7 @@ struct Segment {
     unselect: bool,
 }
 
-fn segments() -> impl Widget<State> {
+fn rows() -> impl Widget<State> {
     Flex::column()
         .with_child(
             Flex::row()
@@ -548,15 +692,21 @@ fn segments() -> impl Widget<State> {
         .with_flex_child(
             Scroll::new(
                 List::new(|| {
-                    SegmentWidget::new(
+                    RowWidget::new(
                         Flex::row()
                             .with_spacer(TABLE_HORIZONTAL_MARGIN)
                             .with_flex_child(
                                 TextBox::new()
                                     .lens(Identity.map(
-                                        |s: &Segment| s.state.segments[s.index].name.clone(),
-                                        |state: &mut Segment, name: String| {
-                                            if name != state.state.segments[state.index].name {
+                                        |s: &RowT| {
+                                            row_state_name(&s.state.rows[s.row_index]).to_string()
+                                        },
+                                        |state: &mut RowT, name: String| {
+                                            if &name
+                                                != row_state_name(
+                                                    &state.state.rows[state.row_index],
+                                                )
+                                            {
                                                 state.new_name = Some(name);
                                             }
                                         },
@@ -570,12 +720,16 @@ fn segments() -> impl Widget<State> {
                                     TextBox::new().with_text_alignment(TextAlignment::End),
                                 ))
                                 .lens(Identity.map(
-                                    |s: &Segment| s.state.segments[s.index].split_time.clone(),
-                                    |state: &mut Segment, split_time: String| {
-                                        if split_time
-                                            != state.state.segments[state.index].split_time
+                                    |s: &RowT| {
+                                        row_state_split_time(&s.state.rows[s.row_index]).to_string()
+                                    },
+                                    |state: &mut RowT, split_time: String| {
+                                        if let RowState::Segment(s) =
+                                            &state.state.rows[state.row_index]
                                         {
-                                            state.new_split_time = Some(split_time);
+                                            if split_time != s.split_time {
+                                                state.new_split_time = Some(split_time);
+                                            }
                                         }
                                     },
                                 ))
@@ -587,12 +741,17 @@ fn segments() -> impl Widget<State> {
                                     TextBox::new().with_text_alignment(TextAlignment::End),
                                 ))
                                 .lens(Identity.map(
-                                    |s: &Segment| s.state.segments[s.index].segment_time.clone(),
-                                    |state: &mut Segment, segment_time: String| {
-                                        if segment_time
-                                            != state.state.segments[state.index].segment_time
+                                    |s: &RowT| {
+                                        row_state_segment_time(&s.state.rows[s.row_index])
+                                            .to_string()
+                                    },
+                                    |state: &mut RowT, segment_time: String| {
+                                        if let RowState::Segment(s) =
+                                            &state.state.rows[state.row_index]
                                         {
-                                            state.new_segment_time = Some(segment_time);
+                                            if segment_time != s.segment_time {
+                                                state.new_segment_time = Some(segment_time);
+                                            }
                                         }
                                     },
                                 ))
@@ -604,14 +763,18 @@ fn segments() -> impl Widget<State> {
                                     TextBox::new().with_text_alignment(TextAlignment::End),
                                 ))
                                 .lens(Identity.map(
-                                    |s: &Segment| {
-                                        s.state.segments[s.index].best_segment_time.clone()
+                                    |s: &RowT| {
+                                        row_state_best_segment_time(&s.state.rows[s.row_index])
+                                            .to_string()
                                     },
-                                    |state: &mut Segment, best_segment_time: String| {
-                                        if best_segment_time
-                                            != state.state.segments[state.index].best_segment_time
+                                    |state: &mut RowT, best_segment_time: String| {
+                                        if let RowState::Segment(s) =
+                                            &state.state.rows[state.row_index]
                                         {
-                                            state.new_best_segment_time = Some(best_segment_time);
+                                            if best_segment_time != s.best_segment_time {
+                                                state.new_best_segment_time =
+                                                    Some(best_segment_time);
+                                            }
                                         }
                                     },
                                 ))
@@ -679,7 +842,7 @@ fn tabs() -> impl Widget<State> {
                     env.set(theme::BUTTON_BORDER_RADIUS, 0.0);
                 }),
         )
-        .with_flex_child(segments(), 1.0)
+        .with_flex_child(rows(), 1.0)
 }
 
 fn body() -> impl Widget<State> {
@@ -923,5 +1086,42 @@ impl<T: Widget<State>> Widget<State> for OtherButtonWidget<T> {
 
     fn paint(&mut self, ctx: &mut PaintCtx, data: &State, env: &Env) {
         self.inner.paint(ctx, data, env)
+    }
+}
+
+// --------------------------------------------------------
+
+fn row_state_selected_or_active(r: &RowState) -> bool {
+    match r {
+        RowState::Segment(s) => s.selected.is_selected_or_active(),
+        RowState::SegmentGroup(g) => g.selected,
+    }
+}
+
+fn row_state_name(r: &RowState) -> &str {
+    match r {
+        RowState::Segment(s) => &s.name,
+        RowState::SegmentGroup(g) => &g.name,
+    }
+}
+
+fn row_state_split_time(r: &RowState) -> &str {
+    match r {
+        RowState::Segment(s) => &s.split_time,
+        RowState::SegmentGroup(_) => "",
+    }
+}
+
+fn row_state_segment_time(r: &RowState) -> &str {
+    match r {
+        RowState::Segment(s) => &s.segment_time,
+        RowState::SegmentGroup(_) => "",
+    }
+}
+
+fn row_state_best_segment_time(r: &RowState) -> &str {
+    match r {
+        RowState::Segment(s) => &s.best_segment_time,
+        RowState::SegmentGroup(_) => "",
     }
 }

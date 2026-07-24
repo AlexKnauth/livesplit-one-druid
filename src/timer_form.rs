@@ -1,17 +1,17 @@
 use std::{collections::VecDeque, path::Path, sync::Arc};
 
+#[cfg(target_os = "linux")]
+use druid::Cursor;
 use druid::{
     commands,
     menu::MenuEntry,
     piet::PietImage,
     theme,
     widget::{Controller, Flex},
-    AppDelegate, AppLauncher, BoxConstraints, DelegateCtx, Env, Event, EventCtx,
-    FileDialogOptions, FileInfo, FileSpec, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, MenuItem,
-    Point, Selector, Size, UpdateCtx, Widget, WidgetExt, WindowDesc, WindowId, WindowLevel,
+    AppDelegate, AppLauncher, BoxConstraints, DelegateCtx, Env, Event, EventCtx, FileDialogOptions,
+    FileInfo, FileSpec, LayoutCtx, LifeCycle, LifeCycleCtx, Menu, MenuItem, Point, Selector, Size,
+    UpdateCtx, Widget, WidgetExt, WindowDesc, WindowId, WindowLevel,
 };
-#[cfg(target_os = "linux")]
-use druid::Cursor;
 use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
 
 #[cfg(feature = "auto-splitting")]
@@ -20,7 +20,7 @@ use crate::{
     config::or_show_error,
     consts::{
         BACKGROUND, BUTTON_BORDER, BUTTON_BORDER_RADIUS, BUTTON_BOTTOM, BUTTON_TOP, PRIMARY_LIGHT,
-        SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
+        RUN_EDITOR_WINDOW_HEIGHT, SELECTED_TEXT_BACKGROUND_COLOR, TEXTBOX_BACKGROUND,
     },
     hotkeys_editor, layout_editor, run_editor, server_editor, software_renderer,
     window_settings_editor::{self, WindowSettings},
@@ -369,8 +369,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     let editor = RunEditor::new(run).unwrap();
                     let window = WindowDesc::new(run_editor::root_widget().lens(RunEditorLens))
                         .title("Splits Editor")
-                        .with_min_size((690.0, 495.0))
-                        .window_size((690.0, 495.0))
+                        .with_min_size((690.0, RUN_EDITOR_WINDOW_HEIGHT))
+                        .window_size((690.0, RUN_EDITOR_WINDOW_HEIGHT))
                         // TODO: WindowLevel::Modal(ctx.window().clone())
                         .set_level(WindowLevel::AppWindow)
                         .set_always_on_top(true);

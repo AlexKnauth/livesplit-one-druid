@@ -15,6 +15,14 @@ pub const COLUMN_LABEL_FONT: FontDescriptor = KEY_FONT;
 pub const TABLE_HORIZONTAL_MARGIN: f64 = 10.0;
 pub const TIME_COLUMN_WIDTH: f64 = 110.0;
 pub const ATTEMPTS_OFFSET_WIDTH: f64 = 140.0;
+pub const RUN_EDITOR_BUTTONS: f64 = 8.0;
+pub const RUN_EDITOR_WINDOW_HEIGHT: f64 = 24.0
+    + ICON_SIZE
+    + SPACING
+    + 3.0 * MARGIN
+    + RUN_EDITOR_BUTTONS * BUTTON_HEIGHT
+    + (RUN_EDITOR_BUTTONS - 1.0) * BUTTON_SPACING
+    + DIALOG_BUTTON_HEIGHT;
 
 pub const SELECTED_TEXT_BACKGROUND_COLOR: Color = Color::rgb8(5, 99, 212);
 pub const BUTTON_TOP: Color = Color::grey8(0x1c);
