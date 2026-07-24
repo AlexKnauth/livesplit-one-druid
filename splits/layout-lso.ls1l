@@ -49,12 +49,12 @@
                         ]
                     ]
                 },
-                "visual_split_count": 16,
-                "split_preview_count": 1,
+                "visual_split_count": 12,
+                "split_preview_count": 2,
                 "show_thin_separators": true,
                 "show_gap_separators": true,
                 "always_show_last_split": true,
-                "fill_with_blank_space": true,
+                "fill_with_blank_space": false,
                 "display_two_rows": false,
                 "current_split_gradient": {
                     "Vertical": [
