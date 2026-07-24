@@ -321,7 +321,7 @@
         <Setting type="string" value="WatcherChandelier" />
         <Setting type="string" value="BlackKnight" />
         <Setting type="string" value="TeachersArchive" />
-        <Setting type="string" value="QueensGardensEntry" />
+        <Setting type="string" value="EnterQueensGardensOrDeepnest" />
         <Setting type="string" value="ManualSplit" />
       </Setting>
       <Setting id="splits_0_item" type="string" value="LegacyStart" />
@@ -347,7 +347,7 @@
       <Setting id="splits_20_item" type="string" value="WatcherChandelier" />
       <Setting id="splits_21_item" type="string" value="BlackKnight" />
       <Setting id="splits_22_item" type="string" value="TeachersArchive" />
-      <Setting id="splits_23_item" type="string" value="QueensGardensEntry" />
+      <Setting id="splits_23_item" type="string" value="EnterQueensGardensOrDeepnest" />
       <Setting id="splits_24_item" type="string" value="ManualSplit" />
       <Setting id="timing_method" type="string" value="LoadRemovedTime" />
       <Setting id="hit_counter" type="string" value="None" />
