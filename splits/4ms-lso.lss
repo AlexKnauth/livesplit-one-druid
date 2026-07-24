@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Run version="1.8.0">
+<Run version="1.8.1">
   <GameIcon />
   <GameName>Hollow Knight Category Extensions</GameName>
   <CategoryName>4 Mask Shards</CategoryName>
@@ -3213,6 +3213,7 @@
       </SegmentHistory>
     </Segment>
   </Segments>
+  <SegmentGroups />
   <AutoSplitterSettings>
     <Version>1.0</Version>
     <CustomSettings>
