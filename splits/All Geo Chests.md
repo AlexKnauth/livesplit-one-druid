@@ -99,7 +99,7 @@
 - Acid skip into Fog Canyon
 - Bench in Archives
 
-## Enter QG or Deepnest
+## Enter QG or Deepnest (7)
 - Bench in Archives
 - Head up to Greenpath
 - Go past MMC and open the geo chest
