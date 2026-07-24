@@ -3213,7 +3213,12 @@
       </SegmentHistory>
     </Segment>
   </Segments>
-  <SegmentGroups />
+  <SegmentGroups>
+    <SegmentGroup start="0" end="4" />
+    <SegmentGroup start="4" end="7" />
+    <SegmentGroup start="7" end="9" />
+    <SegmentGroup start="9" end="13" />
+  </SegmentGroups>
   <AutoSplitterSettings>
     <Version>1.0</Version>
     <CustomSettings>
