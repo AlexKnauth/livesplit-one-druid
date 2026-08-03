@@ -23,7 +23,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{cli, server, timer_form, LayoutData, MainState};
+use crate::{cli, consts::TIMER_MIN_SIZE, server, timer_form, LayoutData, MainState};
 
 #[derive(Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -614,7 +614,7 @@ impl Config {
     pub fn build_window(&self) -> WindowDesc<MainState> {
         let w = WindowDesc::new(timer_form::root_widget())
             .title("LiveSplit One")
-            .with_min_size((50.0, 50.0))
+            .with_min_size((TIMER_MIN_SIZE, TIMER_MIN_SIZE))
             .window_size((self.window.width, self.window.height))
             .show_titlebar(false)
             .transparent(true)
