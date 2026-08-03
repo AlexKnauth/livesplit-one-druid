@@ -14,6 +14,8 @@ use druid::{
 };
 use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
 
+#[cfg(target_os = "linux")]
+use crate::consts::TIMER_MIN_SIZE;
 #[cfg(feature = "auto-splitting")]
 use crate::{autosplitter_editor, AutoSplitterEditorLens};
 use crate::{
@@ -1109,24 +1111,24 @@ impl<T, W: Widget<T>> Controller<T, W> for WindowInteractionController {
 
                         match edge {
                             ResizeEdge::Left | ResizeEdge::TopLeft | ResizeEdge::BottomLeft => {
-                                new_size.width = (init_size.width - dx).max(50.0);
+                                new_size.width = (init_size.width - dx).max(TIMER_MIN_SIZE);
                                 new_pos.x = init_win.x + (init_size.width - new_size.width);
                             }
                             ResizeEdge::Right | ResizeEdge::TopRight | ResizeEdge::BottomRight => {
-                                new_size.width = (init_size.width + dx).max(50.0);
+                                new_size.width = (init_size.width + dx).max(TIMER_MIN_SIZE);
                             }
                             _ => {}
                         }
 
                         match edge {
                             ResizeEdge::Top | ResizeEdge::TopLeft | ResizeEdge::TopRight => {
-                                new_size.height = (init_size.height - dy).max(50.0);
+                                new_size.height = (init_size.height - dy).max(TIMER_MIN_SIZE);
                                 new_pos.y = init_win.y + (init_size.height - new_size.height);
                             }
                             ResizeEdge::Bottom
                             | ResizeEdge::BottomLeft
                             | ResizeEdge::BottomRight => {
-                                new_size.height = (init_size.height + dy).max(50.0);
+                                new_size.height = (init_size.height + dy).max(TIMER_MIN_SIZE);
                             }
                             _ => {}
                         }

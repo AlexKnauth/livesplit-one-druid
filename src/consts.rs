@@ -1,5 +1,7 @@
 use druid::{theme, Color, Env, FontDescriptor, FontFamily, FontWeight};
 
+pub const TIMER_MIN_SIZE: f64 = 15.0;
+
 pub const ICON_SIZE: f64 = 140.0;
 pub const MARGIN: f64 = 20.0;
 pub const SPACING: f64 = 16.0;
