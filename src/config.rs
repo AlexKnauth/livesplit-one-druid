@@ -431,7 +431,8 @@ impl Config {
             timer.run_auto_splitter_settings_map_store(runtime.settings_map().unwrap_or_default());
             let mut buf = String::new();
             save_timer(timer, &mut buf).context("Failed saving the splits.")?;
-            fs::write(path, &buf).context(format!("Failed writing the splits file to {:?}.", path))?;
+            fs::write(path, &buf)
+                .context(format!("Failed writing the splits file to {:?}.", path))?;
             timer.mark_as_unmodified();
 
             self.splits.remove_from_history();
@@ -517,7 +518,8 @@ impl Config {
             settings
                 .write_json(&mut buf)
                 .context("Failed saving the layout.")?;
-            fs::write(path, &buf).context(format!("Failed writing the layout file to {:?}.", path))?;
+            fs::write(path, &buf)
+                .context(format!("Failed writing the layout file to {:?}.", path))?;
         }
         Ok(())
     }
