@@ -2375,7 +2375,7 @@ checksum = "6373607a59f0be73a39b6fe456b8192fcc3585f602af20751600e974dd455e77"
 [[package]]
 name = "livesplit-auto-splitting"
 version = "0.1.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=dev#9cfc24902053e3c511ec77f02bcea53f835a5e56"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=dev#b96c4bf26b020a6f421f06a4a9ebb36cfb868782"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -2398,7 +2398,7 @@ dependencies = [
 [[package]]
 name = "livesplit-core"
 version = "0.13.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=dev#9cfc24902053e3c511ec77f02bcea53f835a5e56"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=dev#b96c4bf26b020a6f421f06a4a9ebb36cfb868782"
 dependencies = [
  "arc-swap",
  "base64-simd",
@@ -2435,7 +2435,7 @@ dependencies = [
 [[package]]
 name = "livesplit-hotkey"
 version = "0.8.1"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=dev#9cfc24902053e3c511ec77f02bcea53f835a5e56"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=dev#b96c4bf26b020a6f421f06a4a9ebb36cfb868782"
 dependencies = [
  "bitflags 2.10.0",
  "cfg-if",
@@ -2476,7 +2476,7 @@ dependencies = [
 [[package]]
 name = "livesplit-title-abbreviations"
 version = "0.3.0"
-source = "git+https://github.com/AlexKnauth/livesplit-core?branch=dev#9cfc24902053e3c511ec77f02bcea53f835a5e56"
+source = "git+https://github.com/AlexKnauth/livesplit-core?branch=dev#b96c4bf26b020a6f421f06a4a9ebb36cfb868782"
 
 [[package]]
 name = "log"
@@ -3949,7 +3949,7 @@ version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "287f59010008f0d7cf5e3b03196d666c1acc46c8d3e9cf34c28a1a7157601e72"
 dependencies = [
- "heck 0.4.1",
+ "heck 0.5.0",
  "proc-macro2",
  "quote",
  "syn 2.0.114",
@@ -5105,7 +5105,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
