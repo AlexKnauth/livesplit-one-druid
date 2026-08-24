@@ -410,7 +410,7 @@ impl Config {
         }
 
         #[cfg(feature = "auto-splitting")]
-        auto_splitter.reload(shared_timer.clone())?;
+        reload(auto_splitter, shared_timer);
 
         Ok(())
     }
@@ -428,7 +428,7 @@ impl Config {
     ) -> Result<()> {
         if let Some(path) = &self.splits.current {
             #[cfg(feature = "auto-splitting")]
-            timer.run_auto_splitter_settings_map_store(runtime.settings_map().unwrap_or_default());
+            runtime.store_settings();
             let mut buf = String::new();
             save_timer(timer, &mut buf).context("Failed saving the splits.")?;
             fs::write(path, &buf)
@@ -452,7 +452,7 @@ impl Config {
         path: PathBuf,
     ) -> Result<()> {
         #[cfg(feature = "auto-splitting")]
-        timer.run_auto_splitter_settings_map_store(runtime.settings_map().unwrap_or_default());
+        runtime.store_settings();
         let mut buf = String::new();
         save_timer(timer, &mut buf).context("Failed saving the splits.")?;
         fs::write(&path, &buf).context(format!("Failed writing the splits file to {:?}.", path))?;
@@ -561,7 +561,7 @@ impl Config {
         #[cfg(feature = "auto-splitting")]
         runtime.unload()?;
         #[cfg(feature = "auto-splitting")]
-        runtime.load(path.into(), shared_timer.clone())?;
+        runtime.load_from_path(shared_timer.clone(), path.into())?;
         Ok(())
     }
 
@@ -637,7 +637,7 @@ impl Config {
         timer: SharedTimer,
     ) {
         if let Some(auto_splitter) = &self.general.auto_splitter {
-            if let Err(e) = runtime.load(auto_splitter.clone(), timer) {
+            if let Err(e) = runtime.load_from_path(timer, auto_splitter.clone()) {
                 // TODO: Error chain
                 log::error!("Auto Splitter failed to load: {}", e);
             }
@@ -693,4 +693,18 @@ fn validate_position(position: impl Into<druid::Point>) -> Option<druid::Point> 
         }
     }
     None
+}
+
+#[cfg(feature = "auto-splitting")]
+fn reload(
+    auto_splitter: &livesplit_core::auto_splitting::Runtime<SharedTimer>,
+    shared_timer: &SharedTimer,
+) {
+    let mp = auto_splitter.loaded_path();
+    auto_splitter.unload().ok();
+    if let Some(p) = mp {
+        auto_splitter.load_from_path(shared_timer.clone(), p).ok();
+    } else {
+        auto_splitter.load(shared_timer.clone()).ok();
+    }
 }
