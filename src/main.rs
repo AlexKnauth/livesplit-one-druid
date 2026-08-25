@@ -37,6 +37,8 @@ mod timer_form;
 mod window_settings_editor;
 
 #[cfg(feature = "auto-splitting")]
+mod auto_splitters;
+#[cfg(feature = "auto-splitting")]
 mod autosplitter_editor;
 
 mod software_renderer;
@@ -116,6 +118,8 @@ impl MainState {
         let hotkey_system = config.configure_hotkeys(timer.clone());
         *HOTKEY_SYSTEM.write().unwrap() = Some(hotkey_system);
 
+        #[cfg(feature = "auto-splitting")]
+        auto_splitters::set_up();
         #[cfg(feature = "auto-splitting")]
         let auto_splitter = livesplit_core::auto_splitting::Runtime::new();
         #[cfg(feature = "auto-splitting")]

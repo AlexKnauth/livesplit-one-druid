@@ -185,6 +185,13 @@ static CONFIG_PATH: Lazy<PathBuf> = Lazy::new(|| {
         .unwrap_or_default()
 });
 
+#[cfg(feature = "auto-splitting")]
+pub fn get_config_folder() -> Option<&'static std::path::Path> {
+    let config_folder = CONFIG_PATH.parent()?;
+    create_dir_all(config_folder).ok()?;
+    Some(config_folder)
+}
+
 impl Config {
     pub fn load(cli: cli::Cli) -> Self {
         let mut cfg = Self::parse().unwrap_or_default();
