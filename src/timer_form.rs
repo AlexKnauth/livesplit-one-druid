@@ -17,9 +17,7 @@ use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
 #[cfg(target_os = "linux")]
 use crate::consts::TIMER_MIN_SIZE;
 #[cfg(feature = "auto-splitting")]
-use crate::{config::show_error, auto_splitters, autosplitter_editor, AutoSplitterEditorLens};
-#[cfg(feature = "auto-splitting")]
-use livesplit_core::event::TimerQuery;
+use crate::{auto_splitters, autosplitter_editor, config::show_error, AutoSplitterEditorLens};
 use crate::{
     config::or_show_error,
     consts::{
@@ -31,6 +29,8 @@ use crate::{
     HotkeysEditorLens, LayoutEditorLens, MainState, OpenWindow, RunEditorLens, ServerEditorLens,
     WindowSettingsEditorLens, HOTKEY_SYSTEM,
 };
+#[cfg(feature = "auto-splitting")]
+use livesplit_core::event::TimerQuery;
 
 struct WithMenu<T> {
     // device: Device,
@@ -334,15 +334,12 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                         MenuItem::new("Activate Game Auto-splitter")
                                             .command(CONTEXT_MENU_ACTIVATE_AUTO_SPLITTER),
                                     )
-                                    .entry(
-                                        MenuItem::new("Open Local Auto-splitter...").command(
-                                            CONTEXT_MENU_SET_INTENT.with(Intent::OPEN_AUTO_SPLITTER),
-                                        ),
-                                    )
+                                    .entry(MenuItem::new("Open Local Auto-splitter...").command(
+                                        CONTEXT_MENU_SET_INTENT.with(Intent::OPEN_AUTO_SPLITTER),
+                                    ))
                                     .entry(
                                         MenuItem::new("Edit Auto-splitter Settings...")
                                             .command(CONTEXT_MENU_EDIT_AUTOSPLITTER_SETTINGS),
-                                        
                                     ),
                                 #[cfg(not(feature = "auto-splitting"))]
                                 MenuItem::new("Auto-splitting unavailable").enabled(false),
@@ -559,14 +556,19 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     // TODO
                     let timer = data.timer.get_timer();
                     let game_name = timer.run().game_name();
-                    if let Some(auto_splitter) = auto_splitters::get_list().get_for_game(game_name) {
+                    if let Some(auto_splitter) = auto_splitters::get_list().get_for_game(game_name)
+                    {
                         if !auto_splitter.is_using_auto_splitting_runtime() {
-                            show_error(anyhow::Error::msg("This game's auto splitter is incompatible with LiveSplit One."));
-                        } else if let Some(auto_splitter_path) = auto_splitters::get_downloader().download_for_game(
-                            auto_splitters::get_list(),
-                            game_name,
-                            auto_splitters::get_path(),
-                        ) {
+                            show_error(anyhow::Error::msg(
+                                "This game's auto splitter is incompatible with LiveSplit One.",
+                            ));
+                        } else if let Some(auto_splitter_path) = auto_splitters::get_downloader()
+                            .download_for_game(
+                                auto_splitters::get_list(),
+                                game_name,
+                                auto_splitters::get_path(),
+                            )
+                        {
                             let result = data.config.borrow_mut().open_auto_splitter(
                                 #[cfg(feature = "auto-splitting")]
                                 &data.timer,
@@ -576,10 +578,14 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             );
                             or_show_error(result);
                         } else {
-                            show_error(anyhow::Error::msg("Couldn't download the auto splitter files."));
+                            show_error(anyhow::Error::msg(
+                                "Couldn't download the auto splitter files.",
+                            ));
                         }
                     } else {
-                        show_error(anyhow::Error::msg("No auto splitter available for this game."));
+                        show_error(anyhow::Error::msg(
+                            "No auto splitter available for this game.",
+                        ));
                     }
                 }
                 #[cfg(feature = "auto-splitting")]
