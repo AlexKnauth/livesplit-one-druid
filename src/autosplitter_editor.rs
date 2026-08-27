@@ -1,5 +1,5 @@
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     rc::Rc,
     sync::Arc,
     time::{Duration, Instant},
@@ -21,11 +21,13 @@ use livesplit_core::{
         },
         wasi_path, Runtime,
     },
-    SharedTimer,
+    event::CommandSink,
+    SharedTimer, StoredAutoSplitterSettings,
 };
 
 use crate::{
     combo_box,
+    config::Config,
     consts::{BUTTON_SPACING, DIALOG_BUTTON_HEIGHT, DIALOG_BUTTON_WIDTH, MARGIN},
 };
 
@@ -41,11 +43,19 @@ const FILE_DIALOG_RESULT: Selector<(Arc<str>, std::path::PathBuf)> =
 
 #[derive(Clone, Data)]
 pub struct State {
+    use_local_auto_splitter: bool,
     rows: Arc<Vec<SettingRow>>,
     #[data(ignore)]
     pub runtime: Rc<Runtime<SharedTimer>>,
     #[data(ignore)]
     pub closed_with_ok: bool,
+    /// Original use_local_auto_splitter value when the dialog was opened,
+    /// used to revert on cancel
+    #[data(ignore)]
+    original_use_local_auto_splitter: bool,
+    /// Original loaded_path when the dialog was opened, used to revert on cancel.
+    #[data(ignore)]
+    original_loaded_path: Option<PathBuf>,
     /// Original settings map when the dialog was opened, used to revert on cancel.
     #[data(ignore)]
     original_settings: Option<SettingsMap>,
@@ -93,12 +103,15 @@ impl Data for ChoiceOption {
 }
 
 impl State {
-    pub(crate) fn new(runtime: Rc<Runtime<SharedTimer>>) -> Self {
+    pub(crate) fn new(runtime: Rc<Runtime<SharedTimer>>, use_local_auto_splitter: bool) -> Self {
         let widgets = runtime.settings_widgets().unwrap_or_default();
         let settings_map = runtime.settings_map();
         let rows = build_rows(&widgets, settings_map.as_ref());
         Self {
+            use_local_auto_splitter,
             rows: Arc::new(rows),
+            original_use_local_auto_splitter: use_local_auto_splitter,
+            original_loaded_path: runtime.loaded_path(),
             original_settings: settings_map,
             runtime,
             closed_with_ok: false,
@@ -106,9 +119,31 @@ impl State {
     }
 
     /// Revert the runtime settings to the original state when the dialog was opened.
-    pub(crate) fn revert_settings(&self) {
+    pub(crate) fn revert_settings(&self, config: &mut Config, timer: SharedTimer) {
+        config.set_use_local_auto_splitter(self.original_use_local_auto_splitter);
         let settings = self.original_settings.clone().unwrap_or_default();
-        self.runtime.set_settings_map(settings);
+        if &self.runtime.loaded_path() == &self.original_loaded_path {
+            self.runtime.set_settings_map(settings);
+        } else {
+            self.runtime.unload().ok();
+            let mut s = StoredAutoSplitterSettings::new();
+            if self.original_use_local_auto_splitter {
+                s.set_script_path(
+                    self.original_loaded_path
+                        .as_ref()
+                        .map(|p| p.to_string_lossy()),
+                );
+            }
+            s.set_settings_map(settings);
+            drop(timer.set_auto_splitter_settings(s));
+            if self.original_use_local_auto_splitter {
+                self.runtime.load(timer).ok();
+            } else if let Some(p) = &self.original_loaded_path {
+                self.runtime.load_from_path(timer, p.to_path_buf()).ok();
+            } else {
+                self.runtime.load(timer).ok();
+            }
+        }
     }
 
     /// Sync UI state with the runtime's current settings.

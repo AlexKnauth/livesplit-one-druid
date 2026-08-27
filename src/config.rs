@@ -97,6 +97,7 @@ struct General {
     can_save_layout: bool,
     timing_method: Option<TimingMethod>,
     comparison: Option<String>,
+    use_local_auto_splitter: bool,
     auto_splitter: Option<PathBuf>,
 }
 
@@ -553,6 +554,14 @@ impl Config {
 
     pub fn can_directly_save_layout(&self) -> bool {
         self.general.layout.is_some() && self.general.can_save_layout
+    }
+
+    pub fn get_use_local_auto_splitter(&self) -> bool {
+        self.general.use_local_auto_splitter
+    }
+
+    pub fn set_use_local_auto_splitter(&mut self, use_local_auto_splitter: bool) {
+        self.general.use_local_auto_splitter = use_local_auto_splitter
     }
 
     pub fn open_auto_splitter(
