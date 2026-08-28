@@ -17,7 +17,7 @@ use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
 #[cfg(target_os = "linux")]
 use crate::consts::TIMER_MIN_SIZE;
 #[cfg(feature = "auto-splitting")]
-use crate::{auto_splitters, autosplitter_editor, config::show_error, AutoSplitterEditorLens};
+use crate::{auto_splitters, autosplitter_choice_editor, autosplitter_editor, config::show_error, AutoSplitterChoiceEditorLens, AutoSplitterEditorLens};
 use crate::{
     config::or_show_error,
     consts::{
@@ -146,7 +146,11 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
             }
             Event::MouseUp(event) => {
                 #[cfg(feature = "auto-splitting")]
+                let autosplitter_choice_editor_is_none = data.autosplitter_choice_editor.is_none();
+                #[cfg(feature = "auto-splitting")]
                 let autosplitter_editor_is_none = data.autosplitter_editor.is_none();
+                #[cfg(not(feature = "auto-splitting"))]
+                let autosplitter_choice_editor_is_none = true;
                 #[cfg(not(feature = "auto-splitting"))]
                 let autosplitter_editor_is_none = true;
 
@@ -155,6 +159,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     && data.layout_editor.is_none()
                     && data.window_settings_editor.is_none()
                     && data.hotkeys_editor.is_none()
+                    && autosplitter_choice_editor_is_none
                     && autosplitter_editor_is_none
                     && data.server_editor.is_none()
                 {
@@ -587,6 +592,28 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                             "No auto splitter available for this game.",
                         ));
                     }
+                }
+                #[cfg(feature = "auto-splitting")]
+                if command.is(CONTEXT_MENU_OPEN_AUTO_SPLITTER) {
+                    let window = WindowDesc::new(
+                        autosplitter_choice_editor::root_widget().lens(AutoSplitterChoiceEditorLens),
+                    )
+                    .title("Open Auto-splitter")
+                    .with_min_size((550.0, 400.0))
+                    .window_size((550.0, 450.0))
+                    .set_level(WindowLevel::AppWindow)
+                    .set_always_on_top(true);
+                    let window_id = window.id;
+                    ctx.new_window(window);
+                    let use_local_auto_splitter =
+                        data.config.borrow().get_use_local_auto_splitter();
+                    data.autosplitter_choice_editor = Some(OpenWindow {
+                        id: window_id,
+                        state: autosplitter_choice_editor::State::new(
+                            data.auto_splitter.clone(),
+                            use_local_auto_splitter,
+                        ),
+                    });
                 }
                 #[cfg(feature = "auto-splitting")]
                 if command.is(CONTEXT_MENU_EDIT_AUTOSPLITTER_SETTINGS) {
@@ -1336,6 +1363,19 @@ impl AppDelegate<MainState> for WindowManagement {
                         .set_mouse_pass_through_while_running(mouse_pass_through_while_running);
                 }
                 data.window_settings_editor = None;
+                return;
+            }
+        }
+
+        #[cfg(feature = "auto-splitting")]
+        if let Some(window) = &data.autosplitter_choice_editor {
+            if id == window.id {
+                if !window.state.closed_with_ok {
+                    window
+                        .state
+                        .revert_settings(&mut data.config.borrow_mut(), data.timer.clone());
+                }
+                data.autosplitter_choice_editor = None;
                 return;
             }
         }
