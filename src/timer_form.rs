@@ -17,7 +17,10 @@ use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
 #[cfg(target_os = "linux")]
 use crate::consts::TIMER_MIN_SIZE;
 #[cfg(feature = "auto-splitting")]
-use crate::{auto_splitters, autosplitter_choice_editor, autosplitter_editor, config::show_error, AutoSplitterChoiceEditorLens, AutoSplitterEditorLens};
+use crate::{
+    auto_splitters, autosplitter_choice_editor, autosplitter_editor, config::show_error,
+    AutoSplitterChoiceEditorLens, AutoSplitterEditorLens,
+};
 use crate::{
     config::or_show_error,
     consts::{
@@ -596,7 +599,8 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                 #[cfg(feature = "auto-splitting")]
                 if command.is(CONTEXT_MENU_OPEN_AUTO_SPLITTER) {
                     let window = WindowDesc::new(
-                        autosplitter_choice_editor::root_widget().lens(AutoSplitterChoiceEditorLens),
+                        autosplitter_choice_editor::root_widget()
+                            .lens(AutoSplitterChoiceEditorLens),
                     )
                     .title("Open Auto-splitter")
                     .with_min_size((550.0, 400.0))

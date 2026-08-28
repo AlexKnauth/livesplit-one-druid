@@ -103,8 +103,7 @@ fn settings_editor() -> impl Widget<State> {
 }
 
 fn settings_widget() -> impl Widget<State> {
-    Flex::row()
-        .with_spacer(BUTTON_SPACING)
+    Flex::row().with_spacer(BUTTON_SPACING)
 }
 
 fn dialog_buttons() -> impl Widget<State> {

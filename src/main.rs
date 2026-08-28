@@ -227,7 +227,11 @@ struct AutoSplitterChoiceEditorLens;
 
 #[cfg(feature = "auto-splitting")]
 impl Lens<MainState, autosplitter_choice_editor::State> for AutoSplitterChoiceEditorLens {
-    fn with<V, F: FnOnce(&autosplitter_choice_editor::State) -> V>(&self, data: &MainState, f: F) -> V {
+    fn with<V, F: FnOnce(&autosplitter_choice_editor::State) -> V>(
+        &self,
+        data: &MainState,
+        f: F,
+    ) -> V {
         f(&data.autosplitter_choice_editor.as_ref().unwrap().state)
     }
 
