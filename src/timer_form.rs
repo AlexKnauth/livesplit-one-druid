@@ -627,14 +627,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     .set_always_on_top(true);
                     let window_id = window.id;
                     ctx.new_window(window);
-                    let use_local_auto_splitter =
-                        data.config.borrow().get_use_local_auto_splitter();
                     data.autosplitter_editor = Some(OpenWindow {
                         id: window_id,
-                        state: autosplitter_editor::State::new(
-                            data.auto_splitter.clone(),
-                            use_local_auto_splitter,
-                        ),
+                        state: autosplitter_editor::State::new(data.auto_splitter.clone()),
                     });
                 }
                 if let Some(intent) = command.get(CONTEXT_MENU_SET_INTENT) {
@@ -1384,9 +1379,7 @@ impl AppDelegate<MainState> for WindowManagement {
         if let Some(window) = &data.autosplitter_editor {
             if id == window.id {
                 if !window.state.closed_with_ok {
-                    window
-                        .state
-                        .revert_settings(&mut data.config.borrow_mut(), data.timer.clone());
+                    window.state.revert_settings();
                 }
                 data.autosplitter_editor = None;
                 return;
