@@ -106,7 +106,21 @@ impl List {
     }
 
     pub fn get_website_for_game(&self, game_name: &str) -> Option<&str> {
-        self.get_for_game(game_name)?.website.as_deref()
+        let splitter = self.get_for_game(game_name)?;
+        splitter
+            .auto_splitting_runtime
+            .as_ref()
+            .and_then(|r| r.website.as_deref())
+            .or(splitter.website.as_deref())
+    }
+
+    pub fn get_description_for_game(&self, game_name: &str) -> Option<&str> {
+        let splitter = self.get_for_game(game_name)?;
+        splitter
+            .auto_splitting_runtime
+            .as_ref()
+            .and_then(|r| r.description.as_deref())
+            .or(Some(&splitter.description))
     }
 
     pub fn get_runtime_description_for_game(&self, game_name: &str) -> Option<&str> {
