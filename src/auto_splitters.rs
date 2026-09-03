@@ -65,6 +65,18 @@ pub struct AutoSplitter {
     pub description: String,
     #[serde(rename = "Website")]
     pub website: Option<String>,
+    #[serde(rename = "AutoSplittingRuntime")]
+    auto_splitting_runtime: Option<AutoSplittingRuntime>,
+}
+
+#[derive(Deserialize)]
+pub struct AutoSplittingRuntime {
+    #[serde(rename = "URL")]
+    pub url: String,
+    #[serde(rename = "Description")]
+    pub description: Option<String>,
+    #[serde(rename = "Website")]
+    pub website: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -94,7 +106,47 @@ impl List {
     }
 
     pub fn get_website_for_game(&self, game_name: &str) -> Option<&str> {
-        self.get_for_game(game_name)?.website.as_deref()
+        let splitter = self.get_for_game(game_name)?;
+        splitter
+            .auto_splitting_runtime
+            .as_ref()
+            .and_then(|r| r.website.as_deref())
+            .or(splitter.website.as_deref())
+    }
+
+    pub fn get_description_for_game(&self, game_name: &str) -> Option<&str> {
+        let splitter = self.get_for_game(game_name)?;
+        splitter
+            .auto_splitting_runtime
+            .as_ref()
+            .and_then(|r| r.description.as_deref())
+            .or(Some(&splitter.description))
+    }
+
+    pub fn get_runtime_description_for_game(&self, game_name: &str) -> Option<&str> {
+        let splitter = self.get_for_game(game_name)?;
+        if splitter.auto_splitting_runtime.is_some() {
+            splitter
+                .auto_splitting_runtime
+                .as_ref()?
+                .description
+                .as_deref()
+        } else {
+            None
+        }
+    }
+
+    pub fn get_runtime_website_for_game(&self, game_name: &str) -> Option<&str> {
+        let splitter = self.get_for_game(game_name)?;
+        if splitter.auto_splitting_runtime.is_some() {
+            splitter
+                .auto_splitting_runtime
+                .as_ref()?
+                .website
+                .as_deref()
+        } else {
+            None
+        }
     }
 
     pub fn get_for_game(&self, game_name: &str) -> Option<&AutoSplitter> {
@@ -143,6 +195,31 @@ impl Downloader {
     }
 
     pub fn download(&self, auto_splitter: &AutoSplitter, folder: &Path) -> Option<PathBuf> {
+        if let Some(runtime) = &auto_splitter.auto_splitting_runtime {
+            let url = &runtime.url;
+            let is_wasm = Url::parse(url)
+                .ok()
+                .and_then(|u| {
+                    u.path_segments()
+                        .and_then(|mut s| s.next_back().map(|seg| seg.ends_with(".wasm")))
+                })
+                .unwrap_or_else(|| url.ends_with(".wasm"));
+            if is_wasm {
+                let mut file_paths = Vec::new();
+                if let Err(e) = self
+                    .download_file(url, folder, &mut file_paths)
+                    .with_context(|| format_err!("Failed downloading `{url}`."))
+                {
+                    error!("{e:#?}");
+                } else if let Some(wasm) = file_paths
+                    .into_iter()
+                    .find(|path| path.extension().is_some_and(|e| e == "wasm"))
+                {
+                    return Some(wasm);
+                }
+            }
+        }
+
         let mut file_paths = Vec::new();
 
         for url in &auto_splitter.urls.urls {
@@ -190,9 +267,11 @@ impl Downloader {
 
 impl AutoSplitter {
     pub fn is_using_auto_splitting_runtime(&self) -> bool {
-        self.script_type
-            .as_ref()
-            .is_some_and(|t| t == "AutoSplittingRuntime")
+        self.auto_splitting_runtime.is_some()
+            || self
+                .script_type
+                .as_ref()
+                .is_some_and(|t| t == "AutoSplittingRuntime")
     }
 }
 
