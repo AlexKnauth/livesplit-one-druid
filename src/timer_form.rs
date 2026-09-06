@@ -86,7 +86,6 @@ impl Intent {
     const NEW_LAYOUT: Self = Self(1 << 9);
     const OPEN_LAYOUT: Self = Self(1 << 10);
     const EXIT: Self = Self(1 << 11);
-    const OPEN_AUTO_SPLITTER: Self = Self(1 << 12);
 
     fn contains(self, other: Self) -> bool {
         (self.0 & other.0) == other.0
@@ -112,11 +111,7 @@ const CONTEXT_MENU_EDIT_LAYOUT: Selector = Selector::new("context-menu-edit-layo
 const CONTEXT_MENU_OPEN_LAYOUT: Selector<FileInfo> = Selector::new("context-menu-open-layout");
 const CONTEXT_MENU_SAVE_LAYOUT_AS: Selector<FileInfo> =
     Selector::new("context-menu-save-layout-as");
-#[cfg(feature = "auto-splitting")]
-const CONTEXT_MENU_ACTIVATE_AUTO_SPLITTER: Selector =
-    Selector::new("context-menu-activate-auto-splitter");
-const CONTEXT_MENU_OPEN_AUTO_SPLITTER: Selector<FileInfo> =
-    Selector::new("context-menu-open-auto-splitter");
+const CONTEXT_MENU_OPEN_AUTO_SPLITTER: Selector = Selector::new("context-menu-open-auto-splitter");
 const CONTEXT_MENU_START_OR_SPLIT: Selector = Selector::new("context-menu-start-or-split");
 const CONTEXT_MENU_UNDO_SPLIT: Selector = Selector::new("context-menu-undo-split");
 const CONTEXT_MENU_SKIP_SPLIT: Selector = Selector::new("context-menu-skip-split");
@@ -339,12 +334,9 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                 #[cfg(feature = "auto-splitting")]
                                 Menu::new("Auto-splitter")
                                     .entry(
-                                        MenuItem::new("Activate Game Auto-splitter")
-                                            .command(CONTEXT_MENU_ACTIVATE_AUTO_SPLITTER),
+                                        MenuItem::new("Open Auto-splitter...")
+                                            .command(CONTEXT_MENU_OPEN_AUTO_SPLITTER),
                                     )
-                                    .entry(MenuItem::new("Open Local Auto-splitter...").command(
-                                        CONTEXT_MENU_SET_INTENT.with(Intent::OPEN_AUTO_SPLITTER),
-                                    ))
                                     .entry(
                                         MenuItem::new("Edit Auto-splitter Settings...")
                                             .command(CONTEXT_MENU_EDIT_AUTOSPLITTER_SETTINGS),
@@ -466,15 +458,6 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         data.layout_data.borrow_mut().is_modified = false;
                     }
                     or_show_error(result);
-                } else if let Some(file_info) = command.get(CONTEXT_MENU_OPEN_AUTO_SPLITTER) {
-                    let result = data.config.borrow_mut().open_auto_splitter(
-                        #[cfg(feature = "auto-splitting")]
-                        &data.timer,
-                        #[cfg(feature = "auto-splitting")]
-                        &data.auto_splitter,
-                        file_info.path(),
-                    );
-                    or_show_error(result);
                 } else if command.is(CONTEXT_MENU_START_OR_SPLIT) {
                     data.timer.write().unwrap().split_or_start().ok();
                 } else if command.is(CONTEXT_MENU_UNDO_SPLIT) {
@@ -558,43 +541,6 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         id: window_id,
                         state: server_editor::State::new(data.config.borrow().get_server().clone()),
                     });
-                }
-                #[cfg(feature = "auto-splitting")]
-                if command.is(CONTEXT_MENU_ACTIVATE_AUTO_SPLITTER) {
-                    // TODO
-                    let timer = data.timer.get_timer();
-                    let game_name = timer.run().game_name();
-                    if let Some(auto_splitter) = auto_splitters::get_list().get_for_game(game_name)
-                    {
-                        if !auto_splitter.is_using_auto_splitting_runtime() {
-                            show_error(anyhow::Error::msg(
-                                "This game's auto splitter is incompatible with LiveSplit One.",
-                            ));
-                        } else if let Some(auto_splitter_path) = auto_splitters::get_downloader()
-                            .download_for_game(
-                                auto_splitters::get_list(),
-                                game_name,
-                                auto_splitters::get_path(),
-                            )
-                        {
-                            let result = data.config.borrow_mut().open_auto_splitter(
-                                #[cfg(feature = "auto-splitting")]
-                                &data.timer,
-                                #[cfg(feature = "auto-splitting")]
-                                &data.auto_splitter,
-                                &auto_splitter_path,
-                            );
-                            or_show_error(result);
-                        } else {
-                            show_error(anyhow::Error::msg(
-                                "Couldn't download the auto splitter files.",
-                            ));
-                        }
-                    } else {
-                        show_error(anyhow::Error::msg(
-                            "No auto splitter available for this game.",
-                        ));
-                    }
                 }
                 #[cfg(feature = "auto-splitting")]
                 if command.is(CONTEXT_MENU_OPEN_AUTO_SPLITTER) {
@@ -804,27 +750,6 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                     },
                                 ])
                                 .accept_command(CONTEXT_MENU_OPEN_LAYOUT),
-                        );
-                        ctx.submit_command(open_dialog);
-                        break;
-                    }
-
-                    if self.intent.contains(Intent::OPEN_AUTO_SPLITTER) {
-                        self.intent = self.intent.without(Intent::OPEN_AUTO_SPLITTER);
-                        let open_dialog = commands::SHOW_OPEN_PANEL.with(
-                            FileDialogOptions::new()
-                                .title("Open Auto-splitter")
-                                .allowed_types(vec![
-                                    FileSpec {
-                                        name: "WASM Auto-splitters",
-                                        extensions: &["wasm"],
-                                    },
-                                    FileSpec {
-                                        name: "All Files",
-                                        extensions: &["*.*"],
-                                    },
-                                ])
-                                .accept_command(CONTEXT_MENU_OPEN_AUTO_SPLITTER),
                         );
                         ctx.submit_command(open_dialog);
                         break;

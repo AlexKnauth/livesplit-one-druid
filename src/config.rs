@@ -25,6 +25,9 @@ use std::{
 
 use crate::{cli, consts::TIMER_MIN_SIZE, server, timer_form, LayoutData, MainState};
 
+#[cfg(feature = "auto-splitting")]
+use livesplit_core::{event::CommandSink, StoredAutoSplitterSettings};
+
 #[derive(Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
@@ -560,10 +563,15 @@ impl Config {
         self.general.use_local_auto_splitter
     }
 
-    pub fn set_use_local_auto_splitter(&mut self, use_local_auto_splitter: bool) {
-        self.general.use_local_auto_splitter = use_local_auto_splitter
+    /// Should only be used in combination with one of the runtime load methods:
+    /// `load` or `load_from_path`.
+    fn set_auto_splitter(&mut self, use_local_auto_splitter: bool, path: Option<&Path>) {
+        self.general.use_local_auto_splitter = use_local_auto_splitter;
+        self.general.auto_splitter = path.map(|p| p.to_path_buf());
+        self.save_config();
     }
 
+    // TODO: pass use_local_auto_splitter
     pub fn open_auto_splitter(
         &mut self,
         #[cfg(feature = "auto-splitting")] shared_timer: &SharedTimer,
@@ -572,12 +580,45 @@ impl Config {
         >,
         path: &Path,
     ) -> Result<()> {
+        // TODO: save use_local_auto_splitter
         self.general.auto_splitter = Some(path.into());
         self.save_config();
         #[cfg(feature = "auto-splitting")]
         runtime.unload()?;
         #[cfg(feature = "auto-splitting")]
         runtime.load_from_path(shared_timer.clone(), path.into())?;
+        Ok(())
+    }
+
+    #[cfg(feature = "auto-splitting")]
+    pub fn revert_auto_splitter(
+        &mut self,
+        shared_timer: &SharedTimer,
+        runtime: &livesplit_core::auto_splitting::Runtime<SharedTimer>,
+        use_local_auto_splitter: bool,
+        path: Option<&Path>,
+        settings_map: Option<livesplit_core::auto_splitting::settings::Map>,
+    ) -> Result<()> {
+        self.set_auto_splitter(use_local_auto_splitter, path);
+        let settings = settings_map.unwrap_or_default();
+        if runtime.loaded_path().as_deref() == path {
+            runtime.set_settings_map(settings);
+        } else {
+            runtime.unload()?;
+            let mut s = StoredAutoSplitterSettings::new();
+            if use_local_auto_splitter {
+                s.set_script_path(path.map(|p| p.to_string_lossy()));
+            }
+            s.set_settings_map(settings);
+            drop(shared_timer.set_auto_splitter_settings(s));
+            if use_local_auto_splitter {
+                runtime.load(shared_timer.clone())?;
+            } else if let Some(p) = path {
+                runtime.load_from_path(shared_timer.clone(), p.to_path_buf())?;
+            } else {
+                runtime.load(shared_timer.clone())?;
+            }
+        }
         Ok(())
     }
 

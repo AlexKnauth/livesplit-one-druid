@@ -22,13 +22,13 @@ use livesplit_core::{
         },
         wasi_path, Runtime,
     },
-    event::CommandSink,
+    event::{CommandSink, TimerQuery},
     SharedTimer, StoredAutoSplitterSettings,
 };
 
 use crate::{
-    combo_box,
-    config::Config,
+    auto_splitters, combo_box,
+    config::{or_show_error, show_error, Config},
     consts::{BUTTON_SPACING, DIALOG_BUTTON_HEIGHT, DIALOG_BUTTON_WIDTH, MARGIN},
 };
 
@@ -82,32 +82,14 @@ impl State {
     pub(crate) fn revert_settings(&self) {
         self.config
             .borrow_mut()
-            .set_use_local_auto_splitter(self.original_use_local_auto_splitter);
-        let settings = self.original_settings.clone().unwrap_or_default();
-        if &self.runtime.loaded_path() == &self.original_loaded_path {
-            self.runtime.set_settings_map(settings);
-        } else {
-            self.runtime.unload().ok();
-            let mut s = StoredAutoSplitterSettings::new();
-            if self.original_use_local_auto_splitter {
-                s.set_script_path(
-                    self.original_loaded_path
-                        .as_ref()
-                        .map(|p| p.to_string_lossy()),
-                );
-            }
-            s.set_settings_map(settings);
-            drop(self.timer.set_auto_splitter_settings(s));
-            if self.original_use_local_auto_splitter {
-                self.runtime.load(self.timer.clone()).ok();
-            } else if let Some(p) = &self.original_loaded_path {
-                self.runtime
-                    .load_from_path(self.timer.clone(), p.to_path_buf())
-                    .ok();
-            } else {
-                self.runtime.load(self.timer.clone()).ok();
-            }
-        }
+            .revert_auto_splitter(
+                &self.timer,
+                &self.runtime,
+                self.original_use_local_auto_splitter,
+                self.original_loaded_path.as_deref(),
+                self.original_settings.clone(),
+            )
+            .ok();
     }
 }
 
@@ -132,8 +114,11 @@ impl<W: Widget<State>> Controller<State, W> for SyncController {
         // Handle file dialog request command
         if let Event::Command(cmd) = event {
             if let Some(file_info) = cmd.get(CHOICE_EDITOR_OPEN_AUTO_SPLITTER) {
-                data.runtime
-                    .load_from_path(data.timer.clone(), file_info.path().to_path_buf());
+                // TODO: pass use_local_auto_splitter
+                data.config
+                    .borrow_mut()
+                    .open_auto_splitter(&data.timer, &data.runtime, file_info.path())
+                    .ok();
 
                 ctx.set_handled();
                 return;
@@ -175,9 +160,41 @@ fn settings_widget() -> impl Widget<State> {
 fn external_auto_splitter_widget() -> impl Widget<State> {
     Flex::row().with_spacer(BUTTON_SPACING).with_child(
         Button::new("Activate")
-            .on_click(|_ctx, s: &mut State, _env| {
+            .on_click(|_ctx, data: &mut State, _env| {
                 // TODO: store the autosplitter to be activated somewhere
-                todo!("Activate")
+                let timer = data.timer.get_timer();
+                let game_name = timer.run().game_name();
+                if let Some(auto_splitter) = auto_splitters::get_list().get_for_game(game_name) {
+                    // TODO: allow an auto_splitter with AutoSplittingRuntime child support
+                    if !auto_splitter.is_using_auto_splitting_runtime() {
+                        show_error(anyhow::Error::msg(
+                            "This game's auto splitter is incompatible with LiveSplit One.",
+                        ));
+                    } else if let Some(auto_splitter_path) = auto_splitters::get_downloader()
+                        .download_for_game(
+                            auto_splitters::get_list(),
+                            game_name,
+                            auto_splitters::get_path(),
+                        )
+                    {
+                        let result = data.config.borrow_mut().open_auto_splitter(
+                            #[cfg(feature = "auto-splitting")]
+                            &data.timer,
+                            #[cfg(feature = "auto-splitting")]
+                            &data.runtime,
+                            &auto_splitter_path,
+                        );
+                        or_show_error(result);
+                    } else {
+                        show_error(anyhow::Error::msg(
+                            "Couldn't download the auto splitter files.",
+                        ));
+                    }
+                } else {
+                    show_error(anyhow::Error::msg(
+                        "No auto splitter available for this game.",
+                    ));
+                }
             })
             .disabled_if(|s: &State, _| s.use_local_auto_splitter),
     )
