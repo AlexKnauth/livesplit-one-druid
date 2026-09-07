@@ -51,7 +51,7 @@ struct ListInner {
     auto_splitters: Vec<AutoSplitter>,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct AutoSplitter {
     #[serde(rename = "Games")]
     games: Games,
@@ -67,13 +67,13 @@ pub struct AutoSplitter {
     pub website: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 struct Games {
     #[serde(rename = "Game")]
     games: Vec<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 struct Urls {
     #[serde(rename = "URL")]
     urls: Vec<String>,

@@ -9,7 +9,8 @@ use std::{
 use druid::{
     commands,
     lens::Identity,
-    widget::{Button, Controller, Flex, Label, ListIter, Scroll, Switch},
+    text::TextAlignment,
+    widget::{Button, Controller, Flex, Label, LineBreaking, ListIter, Scroll, Switch},
     Data, Env, Event, EventCtx, FileDialogOptions, FileInfo, FileSpec, LensExt, LifeCycle,
     LifeCycleCtx, Selector, Widget, WidgetExt,
 };
@@ -45,6 +46,10 @@ pub struct State {
     #[data(ignore)]
     pub config: Rc<RefCell<Config>>,
     #[data(ignore)]
+    game_name: String,
+    #[data(ignore)]
+    auto_splitter: Option<auto_splitters::AutoSplitter>,
+    #[data(ignore)]
     pub closed_with_ok: bool,
     /// Original use_local_auto_splitter value when the dialog was opened,
     /// used to revert on cancel
@@ -66,6 +71,8 @@ impl State {
     ) -> Self {
         let settings_map = runtime.settings_map();
         let use_local_auto_splitter = config.borrow().get_use_local_auto_splitter();
+        let game_name = timer.get_timer().run().game_name().to_string();
+        let auto_splitter = auto_splitters::get_list().get_for_game(&game_name).cloned();
         Self {
             use_local_auto_splitter,
             original_use_local_auto_splitter: use_local_auto_splitter,
@@ -74,6 +81,8 @@ impl State {
             timer,
             runtime,
             config,
+            game_name,
+            auto_splitter,
             closed_with_ok: false,
         }
     }
@@ -158,46 +167,72 @@ fn settings_widget() -> impl Widget<State> {
 }
 
 fn external_auto_splitter_widget() -> impl Widget<State> {
-    Flex::row().with_spacer(BUTTON_SPACING).with_child(
-        Button::new("Activate")
-            .on_click(|_ctx, data: &mut State, _env| {
-                // TODO: store the autosplitter to be activated somewhere
-                let timer = data.timer.get_timer();
-                let game_name = timer.run().game_name();
-                if let Some(auto_splitter) = auto_splitters::get_list().get_for_game(game_name) {
-                    // TODO: allow an auto_splitter with AutoSplittingRuntime child support
-                    if !auto_splitter.is_using_auto_splitting_runtime() {
-                        show_error(anyhow::Error::msg(
-                            "This game's auto splitter is incompatible with LiveSplit One.",
-                        ));
-                    } else if let Some(auto_splitter_path) = auto_splitters::get_downloader()
-                        .download_for_game(
-                            auto_splitters::get_list(),
-                            game_name,
-                            auto_splitters::get_path(),
-                        )
-                    {
-                        let result = data.config.borrow_mut().open_auto_splitter(
-                            #[cfg(feature = "auto-splitting")]
-                            &data.timer,
-                            #[cfg(feature = "auto-splitting")]
-                            &data.runtime,
-                            &auto_splitter_path,
-                        );
-                        or_show_error(result);
+    Flex::row()
+        .with_flex_child(
+            Flex::column()
+                .with_child(
+                    Label::dynamic(|s: &State, _| s.game_name.to_string())
+                        .with_line_break_mode(LineBreaking::WordWrap)
+                        .with_text_alignment(TextAlignment::Center),
+                )
+                .with_child(
+                    Label::dynamic(|s: &State, _| {
+                        if let Some(auto_splitter) = &s.auto_splitter {
+                            // TODO: allow an auto_splitter with AutoSplittingRuntime child support
+                            if auto_splitter.is_using_auto_splitting_runtime() {
+                                auto_splitter.description.to_string()
+                            } else {
+                                "This game's auto splitter is incompatible with LiveSplit One."
+                                    .to_string()
+                            }
+                        } else {
+                            "No auto splitter available for this game.".to_string()
+                        }
+                    })
+                    .with_line_break_mode(LineBreaking::WordWrap)
+                    .with_text_alignment(TextAlignment::Center),
+                ),
+            1.0,
+        )
+        .with_spacer(BUTTON_SPACING)
+        .with_child(
+            Button::new("Activate")
+                .on_click(|_ctx, data: &mut State, _env| {
+                    let game_name = &data.game_name;
+                    if let Some(auto_splitter) = &data.auto_splitter {
+                        // TODO: allow an auto_splitter with AutoSplittingRuntime child support
+                        if !auto_splitter.is_using_auto_splitting_runtime() {
+                            show_error(anyhow::Error::msg(
+                                "This game's auto splitter is incompatible with LiveSplit One.",
+                            ));
+                        } else if let Some(auto_splitter_path) = auto_splitters::get_downloader()
+                            .download_for_game(
+                                auto_splitters::get_list(),
+                                game_name,
+                                auto_splitters::get_path(),
+                            )
+                        {
+                            let result = data.config.borrow_mut().open_auto_splitter(
+                                #[cfg(feature = "auto-splitting")]
+                                &data.timer,
+                                #[cfg(feature = "auto-splitting")]
+                                &data.runtime,
+                                &auto_splitter_path,
+                            );
+                            or_show_error(result);
+                        } else {
+                            show_error(anyhow::Error::msg(
+                                "Couldn't download the auto splitter files.",
+                            ));
+                        }
                     } else {
                         show_error(anyhow::Error::msg(
-                            "Couldn't download the auto splitter files.",
+                            "No auto splitter available for this game.",
                         ));
                     }
-                } else {
-                    show_error(anyhow::Error::msg(
-                        "No auto splitter available for this game.",
-                    ));
-                }
-            })
-            .disabled_if(|s: &State, _| s.use_local_auto_splitter),
-    )
+                })
+                .disabled_if(|s: &State, _| s.use_local_auto_splitter),
+        )
 }
 
 fn use_local_auto_splitter_widget() -> impl Widget<State> {
@@ -210,6 +245,9 @@ fn use_local_auto_splitter_widget() -> impl Widget<State> {
                     |s: &State| s.use_local_auto_splitter,
                     |s: &mut State, val: bool| {
                         s.use_local_auto_splitter = val;
+                        // TODO: if !val then load externally fixed
+                        // auto splitter if already activated?
+                        // and different from current loaded_path
                     },
                 ))
                 .center(),
@@ -218,15 +256,20 @@ fn use_local_auto_splitter_widget() -> impl Widget<State> {
 
 fn local_auto_splitter_path_widget() -> impl Widget<State> {
     Flex::row()
-        .with_child(Label::dynamic(|s: &State, _| {
-            s.runtime
-                .loaded_path()
-                .unwrap_or_default()
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string()
-        }))
+        .with_flex_child(
+            Label::dynamic(|s: &State, _| {
+                s.runtime
+                    .loaded_path()
+                    .unwrap_or_default()
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string()
+            })
+            .with_line_break_mode(LineBreaking::WordWrap)
+            .with_text_alignment(TextAlignment::Center),
+            1.0,
+        )
         .with_spacer(BUTTON_SPACING)
         .with_child(
             Button::new("Open Auto-splitter")
