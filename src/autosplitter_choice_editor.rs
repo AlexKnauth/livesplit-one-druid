@@ -218,11 +218,20 @@ fn use_local_auto_splitter_widget() -> impl Widget<State> {
 
 fn local_auto_splitter_path_widget() -> impl Widget<State> {
     Flex::row()
+        .with_child(Label::dynamic(|s: &State, _| {
+            s.runtime
+                .loaded_path()
+                .unwrap_or_default()
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string()
+        }))
         .with_spacer(BUTTON_SPACING)
         .with_child(
-            Button::new("Open Auto-splitter").on_click(|ctx, _s: &mut State, _env| {
-                let open_dialog = commands::SHOW_OPEN_PANEL.with(
-                    FileDialogOptions::new()
+            Button::new("Open Auto-splitter")
+                .on_click(|ctx, s: &mut State, _env| {
+                    let opts = FileDialogOptions::new()
                         .title("Open Auto-splitter")
                         .allowed_types(vec![
                             FileSpec {
@@ -234,12 +243,17 @@ fn local_auto_splitter_path_widget() -> impl Widget<State> {
                                 extensions: &["*.*"],
                             },
                         ])
-                        .accept_command(CHOICE_EDITOR_OPEN_AUTO_SPLITTER),
-                );
-                ctx.submit_command(open_dialog);
-            }),
+                        .accept_command(CHOICE_EDITOR_OPEN_AUTO_SPLITTER);
+                    let opts = if let Some(p) = s.runtime.loaded_path() {
+                        opts.force_starting_directory(p)
+                    } else {
+                        opts
+                    };
+                    let open_dialog = commands::SHOW_OPEN_PANEL.with(opts);
+                    ctx.submit_command(open_dialog);
+                })
+                .disabled_if(|s: &State, _| !s.use_local_auto_splitter),
         )
-        .disabled_if(|s: &State, _| !s.use_local_auto_splitter)
 }
 
 fn dialog_buttons() -> impl Widget<State> {
