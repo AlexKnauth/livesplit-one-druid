@@ -212,6 +212,7 @@ fn external_auto_splitter_widget() -> impl Widget<State> {
                                 auto_splitters::get_path(),
                             )
                         {
+                            // TODO: store auto_splitter_path as downloaded in config
                             let result = data.config.borrow_mut().open_auto_splitter(
                                 #[cfg(feature = "auto-splitting")]
                                 &data.timer,
@@ -231,7 +232,13 @@ fn external_auto_splitter_widget() -> impl Widget<State> {
                         ));
                     }
                 })
-                .disabled_if(|s: &State, _| s.use_local_auto_splitter),
+                .disabled_if(|s: &State, _| {
+                    // TODO: allow an auto_splitter with AutoSplittingRuntime child support
+                    s.use_local_auto_splitter
+                        || s.auto_splitter
+                            .as_ref()
+                            .is_none_or(|a| !a.is_using_auto_splitting_runtime())
+                }),
         )
 }
 
