@@ -212,8 +212,9 @@ fn external_auto_splitter_widget() -> impl Widget<State> {
                                 auto_splitters::get_path(),
                             )
                         {
-                            // TODO: store auto_splitter_path as downloaded in config
-                            let result = data.config.borrow_mut().open_auto_splitter(
+                            let mut config = data.config.borrow_mut();
+                            config.add_to_auto_splitters(game_name, &auto_splitter_path);
+                            let result = config.open_auto_splitter(
                                 #[cfg(feature = "auto-splitting")]
                                 &data.timer,
                                 #[cfg(feature = "auto-splitting")]
