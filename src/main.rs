@@ -37,6 +37,10 @@ mod timer_form;
 mod window_settings_editor;
 
 #[cfg(feature = "auto-splitting")]
+mod auto_splitters;
+#[cfg(feature = "auto-splitting")]
+mod autosplitter_choice_editor;
+#[cfg(feature = "auto-splitting")]
 mod autosplitter_editor;
 
 mod software_renderer;
@@ -73,6 +77,8 @@ pub struct MainState {
     layout_editor: Option<OpenWindow<layout_editor::State>>,
     window_settings_editor: Option<OpenWindow<window_settings_editor::State>>,
     hotkeys_editor: Option<OpenWindow<hotkeys_editor::State>>,
+    #[cfg(feature = "auto-splitting")]
+    autosplitter_choice_editor: Option<OpenWindow<autosplitter_choice_editor::State>>,
     #[cfg(feature = "auto-splitting")]
     autosplitter_editor: Option<OpenWindow<autosplitter_editor::State>>,
     server_editor: Option<OpenWindow<server_editor::State>>,
@@ -117,6 +123,8 @@ impl MainState {
         *HOTKEY_SYSTEM.write().unwrap() = Some(hotkey_system);
 
         #[cfg(feature = "auto-splitting")]
+        auto_splitters::set_up();
+        #[cfg(feature = "auto-splitting")]
         let auto_splitter = livesplit_core::auto_splitting::Runtime::new();
         #[cfg(feature = "auto-splitting")]
         config.maybe_load_auto_splitter(&auto_splitter, timer.clone());
@@ -139,6 +147,8 @@ impl MainState {
             layout_editor: None,
             window_settings_editor: None,
             hotkeys_editor: None,
+            #[cfg(feature = "auto-splitting")]
+            autosplitter_choice_editor: None,
             #[cfg(feature = "auto-splitting")]
             autosplitter_editor: None,
             server_editor: None,
@@ -209,6 +219,28 @@ impl Lens<MainState, hotkeys_editor::State> for HotkeysEditorLens {
         f: F,
     ) -> V {
         f(&mut data.hotkeys_editor.as_mut().unwrap().state)
+    }
+}
+
+#[cfg(feature = "auto-splitting")]
+struct AutoSplitterChoiceEditorLens;
+
+#[cfg(feature = "auto-splitting")]
+impl Lens<MainState, autosplitter_choice_editor::State> for AutoSplitterChoiceEditorLens {
+    fn with<V, F: FnOnce(&autosplitter_choice_editor::State) -> V>(
+        &self,
+        data: &MainState,
+        f: F,
+    ) -> V {
+        f(&data.autosplitter_choice_editor.as_ref().unwrap().state)
+    }
+
+    fn with_mut<V, F: FnOnce(&mut autosplitter_choice_editor::State) -> V>(
+        &self,
+        data: &mut MainState,
+        f: F,
+    ) -> V {
+        f(&mut data.autosplitter_choice_editor.as_mut().unwrap().state)
     }
 }
 

@@ -25,13 +25,29 @@ anyhow = "1.0.93"
 fontdb = "0.16.2"
 clap = { version = "4.5.20", features = ["derive"] }
 futures = "0.3.31"
+percent-encoding = { version = "2.3.2" , optional = true }
+quick-xml = { version = "0.42.0", features = [
+    "serialize",
+    "overlapped-lists",
+], optional = true }
+reqwest = { version = "0.12.1", features = [
+    "blocking",
+    "http2",
+    "macos-system-configuration",
+    "rustls-tls-native-roots",
+], default-features = false, optional = true }
 
 [build-dependencies]
 embed-resource = "3.0.1"
 
 [features]
 default = ["auto-splitting"]
-auto-splitting = ["livesplit-core/auto-splitting"]
+auto-splitting = [
+    "livesplit-core/auto-splitting",
+    "dep:percent-encoding",
+    "dep:quick-xml",
+    "dep:reqwest",
+]
 
 [profile.max-opt]
 inherits = "release"

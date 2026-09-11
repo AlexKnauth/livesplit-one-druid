@@ -17,7 +17,10 @@ use livesplit_core::{LayoutEditor, RunEditor, TimerPhase, TimingMethod};
 #[cfg(target_os = "linux")]
 use crate::consts::TIMER_MIN_SIZE;
 #[cfg(feature = "auto-splitting")]
-use crate::{autosplitter_editor, AutoSplitterEditorLens};
+use crate::{
+    auto_splitters, autosplitter_choice_editor, autosplitter_editor, config::show_error,
+    AutoSplitterChoiceEditorLens, AutoSplitterEditorLens,
+};
 use crate::{
     config::or_show_error,
     consts::{
@@ -29,6 +32,8 @@ use crate::{
     HotkeysEditorLens, LayoutEditorLens, MainState, OpenWindow, RunEditorLens, ServerEditorLens,
     WindowSettingsEditorLens, HOTKEY_SYSTEM,
 };
+#[cfg(feature = "auto-splitting")]
+use livesplit_core::event::TimerQuery;
 
 struct WithMenu<T> {
     // device: Device,
@@ -81,7 +86,6 @@ impl Intent {
     const NEW_LAYOUT: Self = Self(1 << 9);
     const OPEN_LAYOUT: Self = Self(1 << 10);
     const EXIT: Self = Self(1 << 11);
-    const OPEN_AUTO_SPLITTER: Self = Self(1 << 12);
 
     fn contains(self, other: Self) -> bool {
         (self.0 & other.0) == other.0
@@ -107,8 +111,7 @@ const CONTEXT_MENU_EDIT_LAYOUT: Selector = Selector::new("context-menu-edit-layo
 const CONTEXT_MENU_OPEN_LAYOUT: Selector<FileInfo> = Selector::new("context-menu-open-layout");
 const CONTEXT_MENU_SAVE_LAYOUT_AS: Selector<FileInfo> =
     Selector::new("context-menu-save-layout-as");
-const CONTEXT_MENU_OPEN_AUTO_SPLITTER: Selector<FileInfo> =
-    Selector::new("context-menu-open-auto-splitter");
+const CONTEXT_MENU_OPEN_AUTO_SPLITTER: Selector = Selector::new("context-menu-open-auto-splitter");
 const CONTEXT_MENU_START_OR_SPLIT: Selector = Selector::new("context-menu-start-or-split");
 const CONTEXT_MENU_UNDO_SPLIT: Selector = Selector::new("context-menu-undo-split");
 const CONTEXT_MENU_SKIP_SPLIT: Selector = Selector::new("context-menu-skip-split");
@@ -141,7 +144,11 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
             }
             Event::MouseUp(event) => {
                 #[cfg(feature = "auto-splitting")]
+                let autosplitter_choice_editor_is_none = data.autosplitter_choice_editor.is_none();
+                #[cfg(feature = "auto-splitting")]
                 let autosplitter_editor_is_none = data.autosplitter_editor.is_none();
+                #[cfg(not(feature = "auto-splitting"))]
+                let autosplitter_choice_editor_is_none = true;
                 #[cfg(not(feature = "auto-splitting"))]
                 let autosplitter_editor_is_none = true;
 
@@ -150,6 +157,7 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     && data.layout_editor.is_none()
                     && data.window_settings_editor.is_none()
                     && data.hotkeys_editor.is_none()
+                    && autosplitter_choice_editor_is_none
                     && autosplitter_editor_is_none
                     && data.server_editor.is_none()
                 {
@@ -323,16 +331,18 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                     )),
                             )
                             .entry(
-                                MenuItem::new("Open Auto-splitter...").command(
-                                    CONTEXT_MENU_SET_INTENT.with(Intent::OPEN_AUTO_SPLITTER),
-                                ),
-                            )
-                            .entry(
                                 #[cfg(feature = "auto-splitting")]
-                                MenuItem::new("Edit Auto-splitter Settings...")
-                                    .command(CONTEXT_MENU_EDIT_AUTOSPLITTER_SETTINGS),
+                                Menu::new("Auto-splitter")
+                                    .entry(
+                                        MenuItem::new("Open Auto-splitter...")
+                                            .command(CONTEXT_MENU_OPEN_AUTO_SPLITTER),
+                                    )
+                                    .entry(
+                                        MenuItem::new("Edit Auto-splitter Settings...")
+                                            .command(CONTEXT_MENU_EDIT_AUTOSPLITTER_SETTINGS),
+                                    ),
                                 #[cfg(not(feature = "auto-splitting"))]
-                                MenuItem::new("Auto-splitter settings unavailable").enabled(false),
+                                MenuItem::new("Auto-splitting unavailable").enabled(false),
                             )
                             .separator()
                             .entry(control_menu)
@@ -448,15 +458,6 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                         data.layout_data.borrow_mut().is_modified = false;
                     }
                     or_show_error(result);
-                } else if let Some(file_info) = command.get(CONTEXT_MENU_OPEN_AUTO_SPLITTER) {
-                    let result = data.config.borrow_mut().open_auto_splitter(
-                        #[cfg(feature = "auto-splitting")]
-                        &data.timer,
-                        #[cfg(feature = "auto-splitting")]
-                        &data.auto_splitter,
-                        file_info.path(),
-                    );
-                    or_show_error(result);
                 } else if command.is(CONTEXT_MENU_START_OR_SPLIT) {
                     data.timer.write().unwrap().split_or_start().ok();
                 } else if command.is(CONTEXT_MENU_UNDO_SPLIT) {
@@ -539,6 +540,28 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                     data.server_editor = Some(OpenWindow {
                         id: window_id,
                         state: server_editor::State::new(data.config.borrow().get_server().clone()),
+                    });
+                }
+                #[cfg(feature = "auto-splitting")]
+                if command.is(CONTEXT_MENU_OPEN_AUTO_SPLITTER) {
+                    let window = WindowDesc::new(
+                        autosplitter_choice_editor::root_widget()
+                            .lens(AutoSplitterChoiceEditorLens),
+                    )
+                    .title("Open Auto-splitter")
+                    .with_min_size((550.0, 400.0))
+                    .window_size((550.0, 450.0))
+                    .set_level(WindowLevel::AppWindow)
+                    .set_always_on_top(true);
+                    let window_id = window.id;
+                    ctx.new_window(window);
+                    data.autosplitter_choice_editor = Some(OpenWindow {
+                        id: window_id,
+                        state: autosplitter_choice_editor::State::new(
+                            data.timer.clone(),
+                            data.auto_splitter.clone(),
+                            data.config.clone(),
+                        ),
                     });
                 }
                 #[cfg(feature = "auto-splitting")]
@@ -727,27 +750,6 @@ impl<T: Widget<MainState>> Widget<MainState> for WithMenu<T> {
                                     },
                                 ])
                                 .accept_command(CONTEXT_MENU_OPEN_LAYOUT),
-                        );
-                        ctx.submit_command(open_dialog);
-                        break;
-                    }
-
-                    if self.intent.contains(Intent::OPEN_AUTO_SPLITTER) {
-                        self.intent = self.intent.without(Intent::OPEN_AUTO_SPLITTER);
-                        let open_dialog = commands::SHOW_OPEN_PANEL.with(
-                            FileDialogOptions::new()
-                                .title("Open Auto-splitter")
-                                .allowed_types(vec![
-                                    FileSpec {
-                                        name: "WASM Auto-splitters",
-                                        extensions: &["wasm"],
-                                    },
-                                    FileSpec {
-                                        name: "All Files",
-                                        extensions: &["*.*"],
-                                    },
-                                ])
-                                .accept_command(CONTEXT_MENU_OPEN_AUTO_SPLITTER),
                         );
                         ctx.submit_command(open_dialog);
                         break;
@@ -1284,6 +1286,17 @@ impl AppDelegate<MainState> for WindowManagement {
                         .set_mouse_pass_through_while_running(mouse_pass_through_while_running);
                 }
                 data.window_settings_editor = None;
+                return;
+            }
+        }
+
+        #[cfg(feature = "auto-splitting")]
+        if let Some(window) = &data.autosplitter_choice_editor {
+            if id == window.id {
+                if !window.state.closed_with_ok {
+                    window.state.revert_settings();
+                }
+                data.autosplitter_choice_editor = None;
                 return;
             }
         }
