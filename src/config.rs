@@ -103,15 +103,17 @@ struct General {
     use_local_auto_splitter: bool,
     auto_splitter: Option<PathBuf>,
     #[serde(default)]
-    auto_splitters: BTreeMap<Arc<str>, BTreeSet<Arc<Path>>>,
+    auto_splitters: BTreeMap<Arc<str>, Arc<Path>>,
 }
 
 impl General {
+    fn get_game_auto_splitter(&self, game_name: &str) -> Option<&Path> {
+        self.auto_splitters.get(game_name).map(|p| p.as_ref())
+    }
+
     fn add_to_auto_splitters(&mut self, game_name: &str, auto_splitter_path: &Path) {
         self.auto_splitters
-            .entry(game_name.into())
-            .or_default()
-            .insert(auto_splitter_path.into());
+            .insert(game_name.into(), auto_splitter_path.into());
     }
 }
 
@@ -580,6 +582,10 @@ impl Config {
         self.general.use_local_auto_splitter = use_local_auto_splitter;
         self.general.auto_splitter = path.map(|p| p.to_path_buf());
         self.save_config();
+    }
+
+    pub fn get_game_auto_splitter(&self, game_name: &str) -> Option<&Path> {
+        self.general.get_game_auto_splitter(game_name)
     }
 
     pub fn add_to_auto_splitters(&mut self, game_name: &str, auto_splitter_path: &Path) {

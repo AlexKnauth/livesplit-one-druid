@@ -124,10 +124,12 @@ impl<W: Widget<State>> Controller<State, W> for SyncController {
         if let Event::Command(cmd) = event {
             if let Some(file_info) = cmd.get(CHOICE_EDITOR_OPEN_AUTO_SPLITTER) {
                 // TODO: pass use_local_auto_splitter
-                data.config
-                    .borrow_mut()
-                    .open_auto_splitter(&data.timer, &data.runtime, file_info.path())
-                    .ok();
+                let result = data.config.borrow_mut().open_auto_splitter(
+                    &data.timer,
+                    &data.runtime,
+                    file_info.path(),
+                );
+                or_show_error(result);
 
                 ctx.set_handled();
                 return;
@@ -253,9 +255,20 @@ fn use_local_auto_splitter_widget() -> impl Widget<State> {
                     |s: &State| s.use_local_auto_splitter,
                     |s: &mut State, val: bool| {
                         s.use_local_auto_splitter = val;
-                        // TODO: if !val then load externally fixed
-                        // auto splitter if already activated?
-                        // and different from current loaded_path
+                        if !val {
+                            let mut config = s.config.borrow_mut();
+                            if let Some(p) = config.get_game_auto_splitter(&s.game_name) {
+                                if s.runtime.loaded_path().as_deref() != Some(p) {
+                                    // p from the shared borrow of config needs to be copied and dropped
+                                    // before a new mutable borrow of config can be used below
+                                    let p = p.to_path_buf();
+                                    // TODO: pass use_local_auto_splitter
+                                    let result =
+                                        config.open_auto_splitter(&s.timer, &s.runtime, &p);
+                                    or_show_error(result);
+                                }
+                            }
+                        }
                     },
                 ))
                 .center(),
