@@ -164,6 +164,7 @@ fn settings_editor() -> impl Widget<State> {
 fn settings_widget() -> impl Widget<State> {
     Flex::column()
         .with_child(external_auto_splitter_widget())
+        .with_spacer(BUTTON_SPACING)
         .with_child(use_local_auto_splitter_widget())
         .with_child(local_auto_splitter_path_widget())
 }
@@ -308,11 +309,13 @@ fn local_auto_splitter_path_widget() -> impl Widget<State> {
                             },
                         ])
                         .accept_command(CHOICE_EDITOR_OPEN_AUTO_SPLITTER);
+                    /*
                     let opts = if let Some(p) = s.runtime.loaded_path() {
                         opts.force_starting_directory(p)
                     } else {
                         opts
                     };
+                    */
                     let open_dialog = commands::SHOW_OPEN_PANEL.with(opts);
                     ctx.submit_command(open_dialog);
                 })
